@@ -4,17 +4,22 @@ Reusable Django utilities for JatraTech projects: an Auth901-ready user model, m
 
 ## Install
 
-From a local clone (editable):
+Source: [github.com/JatraTech/django-jt](https://github.com/JatraTech/django-jt).
+
+In another project:
 
 ```text
-pip install -e ".[all]"
+uv add "django-jt[all] @ git+https://github.com/JatraTech/django-jt.git"
 ```
 
-From another project, once this repo has a remote:
+In this repo:
 
 ```text
-pip install "django-jt[models,crypto,oidc] @ git+https://<your-remote>/django-jt.git"
+uv sync --all-extras --group dev
+uv run pytest
 ```
+
+pip fallback: `pip install -e ".[all]"`.
 
 Optional extras:
 

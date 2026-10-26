@@ -14,6 +14,9 @@ dependencies = [
     "Django>=4.2",
 ]
 
+[project.urls]
+Repository = "https://github.com/JatraTech/django-jt"
+
 [project.optional-dependencies]
 models = ["django-userforeignkey"]
 crypto = ["cryptography"]
@@ -31,6 +34,17 @@ all = [
     "mozilla-django-oidc",
 ]
 test = [
+    "pytest",
+    "pytest-django",
+    "django-userforeignkey",
+    "djangorestframework",
+    "django-filter",
+    "cryptography",
+    "mozilla-django-oidc",
+]
+
+[dependency-groups]
+dev = [
     "pytest",
     "pytest-django",
     "django-userforeignkey",
