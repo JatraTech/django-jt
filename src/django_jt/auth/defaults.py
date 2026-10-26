@@ -1,10 +1,10 @@
 import os
 from urllib.parse import urlencode
 
-DEFAULT_OIDC_OP_BASE_URL = "https://auth.new901.io"
+DEFAULT_AUTH901_URL = "https://auth.new901.io"
 
 __all__ = [
-    "DEFAULT_OIDC_OP_BASE_URL",
+    "DEFAULT_AUTH901_URL",
     "oidc_defaults",
     "provider_logout",
 ]
@@ -26,12 +26,12 @@ def _setting(name, default=None):
 def oidc_defaults(**overrides) -> dict:
     """mozilla-django-oidc settings for Auth901 (PKCE + RS256).
 
-    ``OIDC_RP_CLIENT_ID`` is required from settings or env — there is no package default.
+    ``AUTH901_CLIENT_ID`` is required from settings or env — there is no package default.
     """
     base = (
-        overrides.pop("OIDC_OP_BASE_URL", None)
-        or _setting("OIDC_OP_BASE_URL", DEFAULT_OIDC_OP_BASE_URL)
-        or DEFAULT_OIDC_OP_BASE_URL
+        overrides.pop("AUTH901_URL", None)
+        or _setting("AUTH901_URL", DEFAULT_AUTH901_URL)
+        or DEFAULT_AUTH901_URL
     ).rstrip("/")
     defaults = {
         "OIDC_OP_BASE_URL": base,
@@ -43,7 +43,7 @@ def oidc_defaults(**overrides) -> dict:
         "OIDC_USE_PKCE": True,
         "OIDC_PKCE_CODE_CHALLENGE_METHOD": "S256",
         "OIDC_RP_SCOPES": "openid email profile",
-        "OIDC_RP_CLIENT_ID": _setting("OIDC_RP_CLIENT_ID", ""),
+        "OIDC_RP_CLIENT_ID": _setting("AUTH901_CLIENT_ID", ""),
         "OIDC_RP_CLIENT_SECRET": _setting("OIDC_RP_CLIENT_SECRET", ""),
         "OIDC_OP_LOGOUT_URL_METHOD": "django_jt.auth.defaults.provider_logout",
     }
@@ -56,8 +56,7 @@ def provider_logout(request) -> str:
     from django.conf import settings
 
     base = (
-        _setting("OIDC_OP_BASE_URL", DEFAULT_OIDC_OP_BASE_URL)
-        or DEFAULT_OIDC_OP_BASE_URL
+        _setting("AUTH901_URL", DEFAULT_AUTH901_URL) or DEFAULT_AUTH901_URL
     ).rstrip("/")
     redirect = getattr(settings, "LOGOUT_REDIRECT_URL", "/")
     post_logout = (
@@ -66,7 +65,7 @@ def provider_logout(request) -> str:
         else redirect
     )
     params = {
-        "client_id": _setting("OIDC_RP_CLIENT_ID", "") or "",
+        "client_id": _setting("AUTH901_CLIENT_ID", "") or "",
         "post_logout_redirect_uri": post_logout,
     }
     return f"{base}/oidc/v1/end_session?{urlencode(params)}"

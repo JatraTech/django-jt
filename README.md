@@ -59,7 +59,7 @@ INSTALLED_APPS = [
 
 ## Auth901 / mozilla-django-oidc
 
-Install the `oidc` extra. Defaults assume `OIDC_OP_BASE_URL=https://auth.new901.io` with PKCE (S256) and RS256. **`OIDC_RP_CLIENT_ID` has no package default** — set it in settings or the environment (example: `395373995647565826`).
+Install the `oidc` extra. Defaults assume `AUTH901_URL=https://auth.new901.io` with PKCE (S256) and RS256. **`AUTH901_CLIENT_ID` has no package default** — set it in settings or the environment (example: `395373995647565826`).
 
 ```python
 # settings.py
@@ -76,8 +76,9 @@ AUTHENTICATION_BACKENDS = [
     "django_jt.auth.oidc.OIDCBackend",
 ]
 
+AUTH901_URL = "https://auth.new901.io"
+AUTH901_CLIENT_ID = "395373995647565826"
 globals().update(oidc_defaults())
-# OIDC_RP_CLIENT_ID must be set here or as an env var
 ```
 
 ```python
@@ -95,7 +96,7 @@ urlpatterns = [
 
 ```python
 AUTH901_SERVICE_CLIENT_ID = "..."
-AUTH901_SERVICE_CLIENT_SECRET = "..."
+AUTH_SERVICE_CLIENT_SECRET = "..."
 AUTH901_ORGANIZATION_ID = "..."  # optional
 ```
 

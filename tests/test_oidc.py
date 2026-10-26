@@ -24,7 +24,7 @@ def test_oidc_defaults_auth901():
 
 
 def test_oidc_defaults_override_base():
-    values = oidc_defaults(OIDC_OP_BASE_URL="https://auth.example.com")
+    values = oidc_defaults(AUTH901_URL="https://auth.example.com")
     assert values["OIDC_OP_TOKEN_ENDPOINT"] == "https://auth.example.com/oauth/v2/token"
     assert values["OIDC_OP_JWKS_ENDPOINT"] == "https://auth.example.com/oauth/v2/keys"
 

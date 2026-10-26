@@ -15,10 +15,14 @@ INSTALLED_APPS = [
 
 ROOT_URLCONF = "tests.urls"
 
+AUTH901_URL = "https://auth.new901.io"
+AUTH901_CLIENT_ID = "test-client-id"
+AUTH901_SERVICE_CLIENT_ID = "svc"
+AUTH_SERVICE_CLIENT_SECRET = "secret"
+
 from django_jt.auth.defaults import oidc_defaults
 
 globals().update(oidc_defaults())
-OIDC_RP_CLIENT_ID = "test-client-id"
 
 AUTH_USER_MODEL = "tests.User"
 
@@ -30,6 +34,3 @@ DATABASES = {
 }
 
 FIELD_ENCRYPTION_KEYS = []
-
-AUTH901_SERVICE_CLIENT_ID = "svc"
-AUTH901_SERVICE_CLIENT_SECRET = "secret"
