@@ -8,9 +8,12 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django_userforeignkey",
     "mozilla_django_oidc",
+    "rest_framework",
     "django_jt",
     "tests",
 ]
+
+ROOT_URLCONF = "tests.urls"
 
 from django_jt.auth.defaults import oidc_defaults
 
@@ -27,3 +30,6 @@ DATABASES = {
 }
 
 FIELD_ENCRYPTION_KEYS = []
+
+AUTH901_SERVICE_CLIENT_ID = "svc"
+AUTH901_SERVICE_CLIENT_SECRET = "secret"

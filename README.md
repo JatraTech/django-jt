@@ -91,6 +91,16 @@ urlpatterns = [
 
 `OIDCBackend` looks up users by `auth901_sub`, then email, and writes `sub`, email, and name claims onto the user.
 
+`POST /auth/invite/` (signed in) creates the person in Auth901 and emails them an invite. Install the `rest` extra. A service account calls Auth901; set these in settings or the environment:
+
+```python
+AUTH901_SERVICE_CLIENT_ID = "..."
+AUTH901_SERVICE_CLIENT_SECRET = "..."
+AUTH901_ORGANIZATION_ID = "..."  # optional
+```
+
+Body: `{"email", "given_name", "family_name"}`. The answer is `201 {"id", "email"}`, and the local user stores `id` on `auth901_sub`.
+
 ## Request id
 
 Put the middleware first so every response, including errors, carries `X-Request-ID`. A valid incoming id (8–128 letters, digits, `.`, `_`, `:`, `-`) is kept; anything else is replaced.

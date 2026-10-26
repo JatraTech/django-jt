@@ -1,6 +1,88 @@
+import requests
 from mozilla_django_oidc.auth import OIDCAuthenticationBackend
+from rest_framework import status
+from rest_framework.exceptions import APIException
 
-__all__ = ["OIDCBackend"]
+from django_jt.auth.defaults import DEFAULT_OIDC_OP_BASE_URL, _setting
+
+DEFAULT_SERVICE_SCOPES = "openid urn:zitadel:iam:org:project:id:zitadel:aud"
+TIMEOUT = 15
+
+__all__ = ["Auth901Unavailable", "OIDCBackend", "invite_user"]
+
+
+class Auth901Unavailable(APIException):
+    status_code = status.HTTP_502_BAD_GATEWAY
+    default_detail = "Auth901 didn't complete that invite."
+    default_code = "auth901_unavailable"
+
+
+def _issuer() -> str:
+    return (
+        _setting("OIDC_OP_BASE_URL", DEFAULT_OIDC_OP_BASE_URL) or DEFAULT_OIDC_OP_BASE_URL
+    ).rstrip("/")
+
+
+def _access_token() -> str:
+    client_id = (_setting("AUTH901_SERVICE_CLIENT_ID") or "").strip()
+    client_secret = (_setting("AUTH901_SERVICE_CLIENT_SECRET") or "").strip()
+    if not client_id or not client_secret:
+        raise Auth901Unavailable()
+    token_url = _setting("OIDC_OP_TOKEN_ENDPOINT") or f"{_issuer()}/oauth/v2/token"
+    scope = (_setting("AUTH901_SERVICE_SCOPES") or DEFAULT_SERVICE_SCOPES).strip()
+    try:
+        reply = requests.post(
+            token_url,
+            data={
+                "grant_type": "client_credentials",
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "scope": scope,
+            },
+            timeout=TIMEOUT,
+        )
+        reply.raise_for_status()
+        access = (reply.json() or {}).get("access_token")
+    except Auth901Unavailable:
+        raise
+    except (requests.RequestException, ValueError, TypeError) as exc:
+        raise Auth901Unavailable() from exc
+    if not access:
+        raise Auth901Unavailable()
+    return access
+
+
+def invite_user(email: str, given_name: str, family_name: str) -> str:
+    """Create a human user in Auth901 and email them an invite. Returns their subject."""
+    payload = {
+        "username": email,
+        "human": {
+            "profile": {"givenName": given_name, "familyName": family_name},
+            "email": {"email": email, "sendCode": {}},
+        },
+    }
+    organization_id = (_setting("AUTH901_ORGANIZATION_ID") or "").strip()
+    if organization_id:
+        payload["organizationId"] = organization_id
+    token = _access_token()
+    try:
+        reply = requests.post(
+            f"{_issuer()}/v2/users/new",
+            json=payload,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+            timeout=TIMEOUT,
+        )
+        reply.raise_for_status()
+        data = reply.json() or {}
+    except (requests.RequestException, ValueError, TypeError) as exc:
+        raise Auth901Unavailable() from exc
+    user_id = data.get("id") or data.get("userId")
+    if not user_id:
+        raise Auth901Unavailable()
+    return str(user_id)
 
 
 class OIDCBackend(OIDCAuthenticationBackend):

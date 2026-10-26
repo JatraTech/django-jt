@@ -20,7 +20,7 @@ Repository = "https://github.com/JatraTech/django-jt"
 [project.optional-dependencies]
 models = ["django-userforeignkey"]
 crypto = ["cryptography"]
-rest = ["djangorestframework", "django-filter"]
+rest = ["djangorestframework", "django-filter", "requests"]
 email = ["requests"]
 errors = ["drf-standardized-errors"]
 oidc = ["mozilla-django-oidc"]
@@ -41,6 +41,7 @@ test = [
     "django-filter",
     "cryptography",
     "mozilla-django-oidc",
+    "requests",
 ]
 
 [dependency-groups]
@@ -52,6 +53,7 @@ dev = [
     "django-filter",
     "cryptography",
     "mozilla-django-oidc",
+    "requests",
 ]
 
 [tool.setuptools.packages.find]

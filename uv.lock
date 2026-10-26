@@ -504,6 +504,7 @@ rest = [
     { name = "django-filter", version = "26.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "django-filter", version = "26.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "djangorestframework" },
+    { name = "requests" },
 ]
 test = [
     { name = "cryptography" },
@@ -514,6 +515,7 @@ test = [
     { name = "mozilla-django-oidc" },
     { name = "pytest" },
     { name = "pytest-django" },
+    { name = "requests" },
 ]
 
 [package.dev-dependencies]
@@ -526,6 +528,7 @@ dev = [
     { name = "mozilla-django-oidc" },
     { name = "pytest" },
     { name = "pytest-django" },
+    { name = "requests" },
 ]
 
 [package.metadata]
@@ -552,6 +555,8 @@ requires-dist = [
     { name = "pytest-django", marker = "extra == 'test'" },
     { name = "requests", marker = "extra == 'all'" },
     { name = "requests", marker = "extra == 'email'" },
+    { name = "requests", marker = "extra == 'rest'" },
+    { name = "requests", marker = "extra == 'test'" },
 ]
 provides-extras = ["models", "crypto", "rest", "email", "errors", "oidc", "all", "test"]
 
@@ -564,6 +569,7 @@ dev = [
     { name = "mozilla-django-oidc" },
     { name = "pytest" },
     { name = "pytest-django" },
+    { name = "requests" },
 ]
 
 [[package]]
