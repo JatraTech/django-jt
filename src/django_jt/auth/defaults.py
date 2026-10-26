@@ -46,6 +46,7 @@ def oidc_defaults(**overrides) -> dict:
         "OIDC_RP_CLIENT_ID": _setting("AUTH901_CLIENT_ID", ""),
         "OIDC_RP_CLIENT_SECRET": _setting("OIDC_RP_CLIENT_SECRET", ""),
         "OIDC_OP_LOGOUT_URL_METHOD": "django_jt.auth.defaults.provider_logout",
+        "OIDC_DRF_AUTH_BACKEND": "django_jt.auth.oidc.OIDCBackend",
     }
     defaults.update(overrides)
     return defaults

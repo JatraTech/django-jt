@@ -76,6 +76,12 @@ AUTHENTICATION_BACKENDS = [
     "django_jt.auth.oidc.OIDCBackend",
 ]
 
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "django_jt.auth.oidc.OIDCAuthentication",
+    ],
+}
+
 AUTH901_URL = "https://auth.new901.io"
 AUTH901_CLIENT_ID = "395373995647565826"
 globals().update(oidc_defaults())

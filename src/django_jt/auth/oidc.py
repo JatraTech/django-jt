@@ -1,5 +1,6 @@
 import requests
 from mozilla_django_oidc.auth import OIDCAuthenticationBackend
+from mozilla_django_oidc.contrib.drf import OIDCAuthentication as MozillaOIDCAuthentication
 from rest_framework import status
 from rest_framework.exceptions import APIException
 
@@ -8,7 +9,7 @@ from django_jt.auth.defaults import DEFAULT_AUTH901_URL, _setting
 DEFAULT_SERVICE_SCOPES = "openid urn:zitadel:iam:org:project:id:zitadel:aud"
 TIMEOUT = 15
 
-__all__ = ["Auth901Unavailable", "OIDCBackend", "invite_user"]
+__all__ = ["Auth901Unavailable", "OIDCAuthentication", "OIDCBackend", "invite_user"]
 
 
 class Auth901Unavailable(APIException):
@@ -117,3 +118,10 @@ class OIDCBackend(OIDCAuthenticationBackend):
             user.username = username[:150]
         user.save()
         return user
+
+
+class OIDCAuthentication(MozillaOIDCAuthentication):
+    """DRF Bearer auth that resolves the user through ``OIDCBackend``."""
+
+    def __init__(self, backend=None):
+        super().__init__(backend=backend or OIDCBackend())

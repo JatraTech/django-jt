@@ -3,9 +3,10 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.test import RequestFactory
 
 from django_jt.auth.defaults import oidc_defaults, provider_logout
-from django_jt.auth.oidc import OIDCBackend
+from django_jt.auth.oidc import OIDCAuthentication, OIDCBackend
 
 User = get_user_model()
 
@@ -21,6 +22,7 @@ def test_oidc_defaults_auth901():
     assert values["OIDC_OP_USER_ENDPOINT"] == "https://auth.new901.io/oidc/v1/userinfo"
     assert values["OIDC_OP_JWKS_ENDPOINT"] == "https://auth.new901.io/oauth/v2/keys"
     assert values["OIDC_RP_CLIENT_ID"] != "395373995647565826"
+    assert values["OIDC_DRF_AUTH_BACKEND"] == "django_jt.auth.oidc.OIDCBackend"
 
 
 def test_oidc_defaults_override_base():
@@ -77,3 +79,12 @@ def test_update_user_sets_sub_and_names():
     assert user.first_name == "Ada"
     assert user.last_name == "Lovelace"
     assert user.username == "ada"
+
+
+def test_bearer_authentication_uses_oidc_backend():
+    user = User(username="ada", email="ada@example.com")
+    auth = OIDCAuthentication()
+    assert isinstance(auth.backend, OIDCBackend)
+    auth.backend.get_or_create_user = lambda token, id_token, payload: user
+    request = RequestFactory().get("/", HTTP_AUTHORIZATION="Bearer access-token")
+    assert auth.authenticate(request) == (user, "access-token")
