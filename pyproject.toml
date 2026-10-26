@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "django-jt"
+version = "0.1.0"
+description = "Reusable Django utilities and mixins (auth extras, model mixins, REST helpers)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "JatraTech" }]
+dependencies = [
+    "Django>=4.2",
+]
+
+[project.optional-dependencies]
+models = ["django-userforeignkey"]
+crypto = ["cryptography"]
+rest = ["djangorestframework", "django-filter"]
+email = ["requests"]
+errors = ["drf-standardized-errors"]
+oidc = ["mozilla-django-oidc"]
+all = [
+    "django-userforeignkey",
+    "cryptography",
+    "djangorestframework",
+    "django-filter",
+    "requests",
+    "drf-standardized-errors",
+    "mozilla-django-oidc",
+]
+test = [
+    "pytest",
+    "pytest-django",
+    "django-userforeignkey",
+    "djangorestframework",
+    "django-filter",
+    "cryptography",
+    "mozilla-django-oidc",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+pythonpath = [".", "src"]
+testpaths = ["tests"]
