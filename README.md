@@ -96,7 +96,7 @@ urlpatterns = [
 
 ```python
 AUTH901_SERVICE_CLIENT_ID = "..."
-AUTH_SERVICE_CLIENT_SECRET = "..."
+AUTH901_SERVICE_CLIENT_SECRET = "..."
 AUTH901_ORGANIZATION_ID = "..."  # optional
 ```
 

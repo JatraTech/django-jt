@@ -25,7 +25,7 @@ def _issuer() -> str:
 
 def _access_token() -> str:
     client_id = (_setting("AUTH901_SERVICE_CLIENT_ID") or "").strip()
-    client_secret = (_setting("AUTH_SERVICE_CLIENT_SECRET") or "").strip()
+    client_secret = (_setting("AUTH901_SERVICE_CLIENT_SECRET") or "").strip()
     if not client_id or not client_secret:
         raise Auth901Unavailable()
     token_url = f"{_issuer()}/oauth/v2/token"

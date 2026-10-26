@@ -18,7 +18,7 @@ ROOT_URLCONF = "tests.urls"
 AUTH901_URL = "https://auth.new901.io"
 AUTH901_CLIENT_ID = "test-client-id"
 AUTH901_SERVICE_CLIENT_ID = "svc"
-AUTH_SERVICE_CLIENT_SECRET = "secret"
+AUTH901_SERVICE_CLIENT_SECRET = "secret"
 
 from django_jt.auth.defaults import oidc_defaults
 
