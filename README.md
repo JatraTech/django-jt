@@ -35,14 +35,14 @@ Optional extras:
 
 ## Custom user model
 
-Subclass `AbstractExtraUser` and set `AUTH_USER_MODEL`. The abstract user keeps Django username login and adds `auth901_sub` for the Auth901 OIDC subject.
+Subclass `Auth901UserMixin` and set `AUTH_USER_MODEL`. The abstract user keeps Django username login and adds `auth901_sub` for the Auth901 OIDC subject.
 
 ```python
 # accounts/models.py
-from django_jt.auth import AbstractExtraUser
+from django_jt.auth import Auth901UserMixin
 
 
-class User(AbstractExtraUser):
+class User(Auth901UserMixin):
     pass
 ```
 

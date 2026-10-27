@@ -2,7 +2,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 
-class AbstractExtraUser(AbstractUser):
+class Auth901UserMixin(AbstractUser):
     """Username-login user with an Auth901 subject (``auth901_sub``).
 
     Host projects subclass this and set ``AUTH_USER_MODEL``.

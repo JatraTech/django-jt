@@ -1,9 +1,9 @@
-__all__ = ["AbstractExtraUser"]
+__all__ = ["Auth901UserMixin"]
 
 
 def __getattr__(name):
-    if name == "AbstractExtraUser":
-        from django_jt.auth.models import AbstractExtraUser
+    if name == "Auth901UserMixin":
+        from django_jt.auth.models import Auth901UserMixin
 
-        return AbstractExtraUser
+        return Auth901UserMixin
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

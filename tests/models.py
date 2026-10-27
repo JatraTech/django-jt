@@ -1,8 +1,8 @@
-from django_jt.auth import AbstractExtraUser
+from django_jt.auth import Auth901UserMixin
 from django_jt.mixins.models import NameModelMixin
 
 
-class User(AbstractExtraUser):
+class User(Auth901UserMixin):
     pass
 
 
