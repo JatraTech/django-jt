@@ -26,9 +26,17 @@ def test_oidc_defaults_auth901():
 
 
 def test_oidc_defaults_override_base():
-    values = oidc_defaults(AUTH901_URL="https://auth.example.com")
+    values = oidc_defaults(AUTH901_BASE_URL="https://auth.example.com")
     assert values["OIDC_OP_TOKEN_ENDPOINT"] == "https://auth.example.com/oauth/v2/token"
     assert values["OIDC_OP_JWKS_ENDPOINT"] == "https://auth.example.com/oauth/v2/keys"
+
+
+def test_oidc_defaults_prefer_env(monkeypatch):
+    monkeypatch.setenv("AUTH901_BASE_URL", "https://auth.env.example")
+    monkeypatch.setenv("AUTH901_CLIENT_ID", "env-client-id")
+    values = oidc_defaults()
+    assert values["OIDC_OP_BASE_URL"] == "https://auth.env.example"
+    assert values["OIDC_RP_CLIENT_ID"] == "env-client-id"
 
 
 def test_provider_logout_uses_end_session(settings):

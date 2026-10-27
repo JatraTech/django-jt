@@ -1,16 +1,19 @@
 import os
 from urllib.parse import urlencode
 
-DEFAULT_AUTH901_URL = "https://auth.new901.io"
+DEFAULT_AUTH901_BASE_URL = "https://auth.new901.io"
 
 __all__ = [
-    "DEFAULT_AUTH901_URL",
+    "DEFAULT_AUTH901_BASE_URL",
     "oidc_defaults",
     "provider_logout",
 ]
 
 
 def _setting(name, default=None):
+    env_value = os.getenv(name)
+    if env_value not in (None, ""):
+        return env_value
     try:
         from django.conf import settings
 
@@ -20,7 +23,7 @@ def _setting(name, default=None):
                 return value
     except Exception:
         pass
-    return os.getenv(name, default)
+    return default
 
 
 def oidc_defaults(**overrides) -> dict:
@@ -29,9 +32,9 @@ def oidc_defaults(**overrides) -> dict:
     ``AUTH901_CLIENT_ID`` is required from settings or env — there is no package default.
     """
     base = (
-        overrides.pop("AUTH901_URL", None)
-        or _setting("AUTH901_URL", DEFAULT_AUTH901_URL)
-        or DEFAULT_AUTH901_URL
+        overrides.pop("AUTH901_BASE_URL", None)
+        or _setting("AUTH901_BASE_URL", DEFAULT_AUTH901_BASE_URL)
+        or DEFAULT_AUTH901_BASE_URL
     ).rstrip("/")
     defaults = {
         "OIDC_OP_BASE_URL": base,
@@ -57,7 +60,7 @@ def provider_logout(request) -> str:
     from django.conf import settings
 
     base = (
-        _setting("AUTH901_URL", DEFAULT_AUTH901_URL) or DEFAULT_AUTH901_URL
+        _setting("AUTH901_BASE_URL", DEFAULT_AUTH901_BASE_URL) or DEFAULT_AUTH901_BASE_URL
     ).rstrip("/")
     redirect = getattr(settings, "LOGOUT_REDIRECT_URL", "/")
     post_logout = (

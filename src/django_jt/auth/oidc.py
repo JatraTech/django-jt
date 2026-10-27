@@ -1,10 +1,12 @@
 import requests
 from mozilla_django_oidc.auth import OIDCAuthenticationBackend
-from mozilla_django_oidc.contrib.drf import OIDCAuthentication as MozillaOIDCAuthentication
+from mozilla_django_oidc.contrib.drf import (
+    OIDCAuthentication as MozillaOIDCAuthentication,
+)
 from rest_framework import status
 from rest_framework.exceptions import APIException
 
-from django_jt.auth.defaults import DEFAULT_AUTH901_URL, _setting
+from django_jt.auth.defaults import DEFAULT_AUTH901_BASE_URL, _setting
 
 DEFAULT_SERVICE_SCOPES = "openid urn:zitadel:iam:org:project:id:zitadel:aud"
 TIMEOUT = 15
@@ -20,7 +22,8 @@ class Auth901Unavailable(APIException):
 
 def _issuer() -> str:
     return (
-        _setting("AUTH901_URL", DEFAULT_AUTH901_URL) or DEFAULT_AUTH901_URL
+        _setting("AUTH901_BASE_URL", DEFAULT_AUTH901_BASE_URL)
+        or DEFAULT_AUTH901_BASE_URL
     ).rstrip("/")
 
 
