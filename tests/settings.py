@@ -20,10 +20,6 @@ AUTH901_CLIENT_ID = "test-client-id"
 AUTH901_SERVICE_CLIENT_ID = "svc"
 AUTH901_SERVICE_CLIENT_SECRET = "secret"
 
-from django_jt.auth.defaults import oidc_defaults
-
-globals().update(oidc_defaults())
-
 AUTH_USER_MODEL = "tests.User"
 
 DATABASES = {

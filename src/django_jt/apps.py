@@ -28,7 +28,9 @@ class DjangoJTConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
 
     def ready(self):
+        from django_jt.auth.defaults import apply_oidc_defaults
         from django_jt.request_id import connect_request_finished
 
+        apply_oidc_defaults()
         connect_request_finished()
         register(check_encryption_keys)

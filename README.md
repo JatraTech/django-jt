@@ -63,13 +63,11 @@ Install the `oidc` extra. Defaults assume `AUTH901_BASE_URL=https://auth.new901.
 
 ```python
 # settings.py
-from django_jt.auth.defaults import oidc_defaults
-
 INSTALLED_APPS = [
     ...,
     "django.contrib.auth",
     "mozilla_django_oidc",
-    "django_jt",
+    "django_jt",  # applies OIDC_* from AUTH901_* in AppConfig.ready()
 ]
 
 AUTHENTICATION_BACKENDS = [
@@ -82,11 +80,8 @@ REST_FRAMEWORK = {
     ],
 }
 
-# Assign Auth901 values before oidc_defaults() (required with environs:
-# read_env does not put keys into os.environ).
 AUTH901_BASE_URL = env("AUTH901_BASE_URL", default="https://auth.new901.io")
 AUTH901_CLIENT_ID = env("AUTH901_CLIENT_ID")
-globals().update(oidc_defaults())
 ```
 
 ```python

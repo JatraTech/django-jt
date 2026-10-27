@@ -6,6 +6,7 @@ DEFAULT_AUTH901_BASE_URL = "https://auth.new901.io"
 
 __all__ = [
     "DEFAULT_AUTH901_BASE_URL",
+    "apply_oidc_defaults",
     "oidc_defaults",
     "provider_logout",
 ]
@@ -63,6 +64,22 @@ def oidc_defaults(**overrides) -> dict:
     }
     defaults.update(overrides)
     return defaults
+
+
+def apply_oidc_defaults(**overrides) -> dict:
+    """Write mozilla OIDC settings onto ``django.conf.settings`` from Auth901 values.
+
+    Only fills missing or empty keys so hosts can override individual ``OIDC_*`` settings.
+    Called from ``DjangoJTConfig.ready``; hosts only need ``AUTH901_*``.
+    """
+    from django.conf import settings
+
+    values = oidc_defaults(**overrides)
+    for key, value in values.items():
+        current = getattr(settings, key, None)
+        if current in (None, ""):
+            setattr(settings, key, value)
+    return values
 
 
 def provider_logout(request) -> str:

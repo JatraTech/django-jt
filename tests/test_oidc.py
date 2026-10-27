@@ -11,6 +11,13 @@ from django_jt.auth.oidc import OIDCAuthentication, OIDCBackend
 User = get_user_model()
 
 
+def test_appconfig_applies_oidc_settings(settings):
+    assert settings.OIDC_RP_CLIENT_ID == "test-client-id"
+    assert settings.OIDC_OP_BASE_URL == "https://auth.new901.io"
+    assert settings.OIDC_USE_PKCE is True
+    assert settings.OIDC_DRF_AUTH_BACKEND == "django_jt.auth.oidc.OIDCBackend"
+
+
 def test_oidc_defaults_auth901():
     values = oidc_defaults()
     assert values["OIDC_OP_BASE_URL"] == "https://auth.new901.io"
