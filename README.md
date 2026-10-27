@@ -82,8 +82,10 @@ REST_FRAMEWORK = {
     ],
 }
 
-AUTH901_BASE_URL = "https://auth.new901.io"
-AUTH901_CLIENT_ID = "395373995647565826"
+# Assign Auth901 values before oidc_defaults() (required with environs:
+# read_env does not put keys into os.environ).
+AUTH901_BASE_URL = env("AUTH901_BASE_URL", default="https://auth.new901.io")
+AUTH901_CLIENT_ID = env("AUTH901_CLIENT_ID")
 globals().update(oidc_defaults())
 ```
 

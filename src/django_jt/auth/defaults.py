@@ -1,4 +1,5 @@
 import os
+import sys
 from urllib.parse import urlencode
 
 DEFAULT_AUTH901_BASE_URL = "https://auth.new901.io"
@@ -23,6 +24,15 @@ def _setting(name, default=None):
                 return value
     except Exception:
         pass
+    # environs (and similar) may set values on the settings module before
+    # LazySettings exposes them; read the loading module directly.
+    module_name = os.getenv("DJANGO_SETTINGS_MODULE")
+    if module_name:
+        mod = sys.modules.get(module_name)
+        if mod is not None:
+            value = getattr(mod, name, None)
+            if value not in (None, ""):
+                return value
     return default
 
 

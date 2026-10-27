@@ -39,6 +39,29 @@ def test_oidc_defaults_prefer_env(monkeypatch):
     assert values["OIDC_RP_CLIENT_ID"] == "env-client-id"
 
 
+def test_oidc_defaults_read_loading_settings_module(monkeypatch):
+    """environs sets settings attrs without putting them in os.environ."""
+    import sys
+    import types
+
+    monkeypatch.delenv("AUTH901_CLIENT_ID", raising=False)
+    monkeypatch.delenv("AUTH901_BASE_URL", raising=False)
+    # Settings still loading: LazySettings is not usable yet.
+    monkeypatch.setattr(
+        "django.conf.settings",
+        SimpleNamespace(configured=False),
+    )
+    module_name = "tests.fake_auth901_settings"
+    fake = types.ModuleType(module_name)
+    fake.AUTH901_CLIENT_ID = "settings-module-client"
+    fake.AUTH901_BASE_URL = "https://auth.settings.example"
+    monkeypatch.setenv("DJANGO_SETTINGS_MODULE", module_name)
+    monkeypatch.setitem(sys.modules, module_name, fake)
+    values = oidc_defaults()
+    assert values["OIDC_RP_CLIENT_ID"] == "settings-module-client"
+    assert values["OIDC_OP_BASE_URL"] == "https://auth.settings.example"
+
+
 def test_provider_logout_uses_end_session(settings):
     settings.LOGOUT_REDIRECT_URL = "/"
     request = SimpleNamespace(build_absolute_uri=lambda path: f"https://app.example.com{path}")
