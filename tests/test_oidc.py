@@ -3,10 +3,13 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
+from django.http import HttpResponse
 from django.test import RequestFactory
+from mozilla_django_oidc.middleware import SessionRefresh as MozillaSessionRefresh
 
 from django_jt.auth.defaults import oidc_defaults, provider_logout
-from django_jt.auth.oidc import OIDCAuthentication, OIDCBackend
+from django_jt.auth.oidc import OIDCAuthentication, OIDCBackend, SessionRefresh
 
 User = get_user_model()
 
@@ -117,6 +120,21 @@ def test_update_user_sets_sub_and_names():
     assert user.first_name == "Ada"
     assert user.last_name == "Lovelace"
     assert user.username == "ada"
+
+
+def test_session_refresh_passes_anonymous_get():
+    assert issubclass(SessionRefresh, MozillaSessionRefresh)
+
+    def get_response(request):
+        return HttpResponse("ok")
+
+    middleware = SessionRefresh(get_response)
+    request = RequestFactory().get("/")
+    request.session = {}
+    request.user = AnonymousUser()
+    response = middleware(request)
+    assert response.status_code == 200
+    assert response.content == b"ok"
 
 
 def test_bearer_authentication_uses_oidc_backend():

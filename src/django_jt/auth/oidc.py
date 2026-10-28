@@ -3,6 +3,7 @@ from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 from mozilla_django_oidc.contrib.drf import (
     OIDCAuthentication as MozillaOIDCAuthentication,
 )
+from mozilla_django_oidc.middleware import SessionRefresh as MozillaSessionRefresh
 from rest_framework import status
 from rest_framework.exceptions import APIException
 
@@ -11,7 +12,13 @@ from django_jt.auth.defaults import DEFAULT_AUTH901_BASE_URL, _setting
 DEFAULT_SERVICE_SCOPES = "openid urn:zitadel:iam:org:project:id:zitadel:aud"
 TIMEOUT = 15
 
-__all__ = ["Auth901Unavailable", "OIDCAuthentication", "OIDCBackend", "invite_user"]
+__all__ = [
+    "Auth901Unavailable",
+    "OIDCAuthentication",
+    "OIDCBackend",
+    "SessionRefresh",
+    "invite_user",
+]
 
 
 class Auth901Unavailable(APIException):
@@ -128,3 +135,7 @@ class OIDCAuthentication(MozillaOIDCAuthentication):
 
     def __init__(self, backend=None):
         super().__init__(backend=backend or OIDCBackend())
+
+
+class SessionRefresh(MozillaSessionRefresh):
+    """Renew an expired Auth901 browser session. Place after AuthenticationMiddleware."""

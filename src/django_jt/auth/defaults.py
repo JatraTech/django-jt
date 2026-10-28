@@ -61,6 +61,9 @@ def oidc_defaults(**overrides) -> dict:
         "OIDC_RP_CLIENT_SECRET": _setting("OIDC_RP_CLIENT_SECRET", ""),
         "OIDC_OP_LOGOUT_URL_METHOD": "django_jt.auth.defaults.provider_logout",
         "OIDC_DRF_AUTH_BACKEND": "django_jt.auth.oidc.OIDCBackend",
+        # Django's global default is None, and mozilla's logout view resolves it
+        # before it can redirect to Auth901 end-session.
+        "LOGOUT_REDIRECT_URL": _setting("LOGOUT_REDIRECT_URL", "/") or "/",
     }
     defaults.update(overrides)
     return defaults

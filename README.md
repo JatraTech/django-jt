@@ -84,6 +84,17 @@ AUTH901_BASE_URL = env("AUTH901_BASE_URL", default="https://auth.new901.io")
 AUTH901_CLIENT_ID = env("AUTH901_CLIENT_ID")
 ```
 
+`SessionRefresh` must follow session and authentication middleware. After `oidc_id_token_expiration`, a browser GET redirects to Auth901 with `prompt=none`. An `XMLHttpRequest` gets `403` and `refresh_url`. Renew waits `OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS` (15 minutes unless you set it).
+
+```python
+MIDDLEWARE = [
+    "django_jt.request_id.RequestIdMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django_jt.auth.oidc.SessionRefresh",
+]
+```
+
 ```python
 # urls.py
 from django.urls import include, path
