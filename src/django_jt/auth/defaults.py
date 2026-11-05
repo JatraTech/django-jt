@@ -41,6 +41,7 @@ def oidc_defaults(**overrides) -> dict:
     """mozilla-django-oidc settings for Auth901 (PKCE + RS256).
 
     ``AUTH901_CLIENT_ID`` is required from settings or env — there is no package default.
+    ``AUTH901_CLIENT_SECRET`` is optional (empty for public PKCE clients).
     """
     base = (
         overrides.pop("AUTH901_BASE_URL", None)
@@ -58,7 +59,7 @@ def oidc_defaults(**overrides) -> dict:
         "OIDC_PKCE_CODE_CHALLENGE_METHOD": "S256",
         "OIDC_RP_SCOPES": "openid email profile",
         "OIDC_RP_CLIENT_ID": _setting("AUTH901_CLIENT_ID", ""),
-        "OIDC_RP_CLIENT_SECRET": _setting("OIDC_RP_CLIENT_SECRET", ""),
+        "OIDC_RP_CLIENT_SECRET": _setting("AUTH901_CLIENT_SECRET", ""),
         "OIDC_OP_LOGOUT_URL_METHOD": "django_jt.auth.defaults.provider_logout",
         "OIDC_DRF_AUTH_BACKEND": "django_jt.auth.oidc.OIDCBackend",
         # Django's global default is None, and mozilla's logout view resolves it

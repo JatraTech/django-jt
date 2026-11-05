@@ -44,9 +44,11 @@ def test_oidc_defaults_override_base():
 def test_oidc_defaults_prefer_env(monkeypatch):
     monkeypatch.setenv("AUTH901_BASE_URL", "https://auth.env.example")
     monkeypatch.setenv("AUTH901_CLIENT_ID", "env-client-id")
+    monkeypatch.setenv("AUTH901_CLIENT_SECRET", "env-client-secret")
     values = oidc_defaults()
     assert values["OIDC_OP_BASE_URL"] == "https://auth.env.example"
     assert values["OIDC_RP_CLIENT_ID"] == "env-client-id"
+    assert values["OIDC_RP_CLIENT_SECRET"] == "env-client-secret"
 
 
 def test_oidc_defaults_read_loading_settings_module(monkeypatch):
