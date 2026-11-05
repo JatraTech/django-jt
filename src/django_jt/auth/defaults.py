@@ -49,10 +49,10 @@ def oidc_defaults(**overrides) -> dict:
     ).rstrip("/")
     defaults = {
         "OIDC_OP_BASE_URL": base,
-        "OIDC_OP_AUTHORIZATION_ENDPOINT": f"{base}/oauth/v2/authorize",
-        "OIDC_OP_TOKEN_ENDPOINT": f"{base}/oauth/v2/token",
-        "OIDC_OP_USER_ENDPOINT": f"{base}/oidc/v1/userinfo",
-        "OIDC_OP_JWKS_ENDPOINT": f"{base}/oauth/v2/keys",
+        "OIDC_OP_AUTHORIZATION_ENDPOINT": f"{base}/login/oauth/authorize",
+        "OIDC_OP_TOKEN_ENDPOINT": f"{base}/api/login/oauth/access_token",
+        "OIDC_OP_USER_ENDPOINT": f"{base}/api/userinfo",
+        "OIDC_OP_JWKS_ENDPOINT": f"{base}/.well-known/jwks",
         "OIDC_RP_SIGN_ALGO": "RS256",
         "OIDC_USE_PKCE": True,
         "OIDC_PKCE_CODE_CHALLENGE_METHOD": "S256",
