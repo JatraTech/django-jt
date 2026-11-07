@@ -72,6 +72,9 @@ class PostMasterEmailBackend(BaseEmailBackend):
             _from = (parseaddr(getattr(message, "from_email", "") or "")[1] or "").strip()
             if _from:
                 payload["provider_sender_email"] = _from
+            _provider_name = (getattr(message, "provider_name", "") or "").strip()
+            if _provider_name:
+                payload["provider_name"] = _provider_name
             if self.user_sub:
                 payload["user_sub"] = str(self.user_sub)
             try:
