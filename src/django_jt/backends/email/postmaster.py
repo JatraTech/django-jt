@@ -1,4 +1,5 @@
 import os
+from email.utils import parseaddr
 
 import requests
 from django.conf import settings
@@ -68,6 +69,9 @@ class PostMasterEmailBackend(BaseEmailBackend):
             for content, mimetype in getattr(message, "alternatives", []):
                 if mimetype == "text/html":
                     payload["html"] = content
+            _from = (parseaddr(getattr(message, "from_email", "") or "")[1] or "").strip()
+            if _from:
+                payload["provider_sender_email"] = _from
             if self.user_sub:
                 payload["user_sub"] = str(self.user_sub)
             try:

@@ -150,6 +150,15 @@ from django_jt.backends.email.postmaster import PostMasterEmailBackend
 
 `ModelMixin` uses `UserForeignKey`. Projects that use it should add `django_userforeignkey` to `INSTALLED_APPS`.
 
+## Postmaster email backend
+
+`PostMasterEmailBackend` (`django_jt.backends.email.postmaster`) posts to Postmaster `POST /api/v1/emails/` using a client-credentials token from `POST /api/v1/token/`. Configure `POSTMASTER_URI`, `POSTMASTER_CLIENT_ID`, and `POSTMASTER_CLIENT_SECRET`.
+
+- **Shared / application mailboxes (empty *User sub* in Postmaster):** leave `PostMasterEmailBackend.user_sub` unset. Set `EmailMessage` / `send_mail` **`from_email`** to the mailbox address you configured on the SMTP row; the backend sends it as `provider_sender_email` so Postmaster picks that row in the shared pool. If `from_email` is unset, Postmaster uses the application **default** provider.
+- **One IdP user's bucket:** set `PostMasterEmailBackend.user_sub` to that user's subject. Optional `from_email` still narrows the row within that bucket via `provider_sender_email`.
+
+Requires the `email` extra (`requests`).
+
 Encrypted fields read `settings.FIELD_ENCRYPTION_KEYS` (a list of Fernet keys). The first key encrypts; every key can decrypt.
 
 ## Host-coupled code
