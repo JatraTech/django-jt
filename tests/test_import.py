@@ -4,7 +4,7 @@ from django_jt.auth.defaults import oidc_defaults
 
 
 def test_package_version():
-    assert django_jt.__version__
+    assert django_jt.__version__ == "0.2.0"
 
 
 def test_auth_exports():

@@ -7,10 +7,15 @@ from mozilla_django_oidc.middleware import SessionRefresh as MozillaSessionRefre
 from rest_framework import status
 from rest_framework.exceptions import APIException
 
-from django_jt.auth.defaults import DEFAULT_AUTH901_BASE_URL, _setting
+from django_jt.auth.base import (
+    AUTH901_HTTP_TIMEOUT,
+    auth901_base_url,
+    auth901_organization,
+    auth901_service_credentials,
+)
+from django_jt.auth.defaults import _setting
 
 DEFAULT_SERVICE_SCOPES = "openid urn:zitadel:iam:org:project:id:zitadel:aud"
-TIMEOUT = 15
 
 __all__ = [
     "Auth901Unavailable",
@@ -27,19 +32,12 @@ class Auth901Unavailable(APIException):
     default_code = "auth901_unavailable"
 
 
-def _issuer() -> str:
-    return (
-        _setting("AUTH901_BASE_URL", DEFAULT_AUTH901_BASE_URL)
-        or DEFAULT_AUTH901_BASE_URL
-    ).rstrip("/")
-
-
 def _access_token() -> str:
-    client_id = (_setting("AUTH901_SERVICE_CLIENT_ID") or "").strip()
-    client_secret = (_setting("AUTH901_SERVICE_CLIENT_SECRET") or "").strip()
-    if not client_id or not client_secret:
-        raise Auth901Unavailable()
-    token_url = f"{_issuer()}/oauth/v2/token"
+    try:
+        client_id, client_secret = auth901_service_credentials()
+    except ValueError:
+        raise Auth901Unavailable() from None
+    token_url = f"{auth901_base_url()}/oauth/v2/token"
     scope = (_setting("AUTH901_SERVICE_SCOPES") or DEFAULT_SERVICE_SCOPES).strip()
     try:
         reply = requests.post(
@@ -50,7 +48,7 @@ def _access_token() -> str:
                 "client_secret": client_secret,
                 "scope": scope,
             },
-            timeout=TIMEOUT,
+            timeout=AUTH901_HTTP_TIMEOUT,
         )
         reply.raise_for_status()
         access = (reply.json() or {}).get("access_token")
@@ -72,19 +70,19 @@ def invite_user(email: str, given_name: str, family_name: str) -> str:
             "email": {"email": email, "sendCode": {}},
         },
     }
-    organization_id = (_setting("AUTH901_ORGANIZATION_ID") or "").strip()
+    organization_id = auth901_organization(required=False)
     if organization_id:
         payload["organizationId"] = organization_id
     token = _access_token()
     try:
         reply = requests.post(
-            f"{_issuer()}/v2/users/new",
+            f"{auth901_base_url()}/v2/users/new",
             json=payload,
             headers={
                 "Authorization": f"Bearer {token}",
                 "Content-Type": "application/json",
             },
-            timeout=TIMEOUT,
+            timeout=AUTH901_HTTP_TIMEOUT,
         )
         reply.raise_for_status()
         data = reply.json() or {}

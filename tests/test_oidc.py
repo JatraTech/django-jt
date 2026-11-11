@@ -27,18 +27,18 @@ def test_oidc_defaults_auth901():
     assert values["OIDC_USE_PKCE"] is True
     assert values["OIDC_PKCE_CODE_CHALLENGE_METHOD"] == "S256"
     assert values["OIDC_RP_SIGN_ALGO"] == "RS256"
-    assert values["OIDC_OP_AUTHORIZATION_ENDPOINT"] == "https://auth.new901.io/oauth/v2/authorize"
-    assert values["OIDC_OP_TOKEN_ENDPOINT"] == "https://auth.new901.io/oauth/v2/token"
-    assert values["OIDC_OP_USER_ENDPOINT"] == "https://auth.new901.io/oidc/v1/userinfo"
-    assert values["OIDC_OP_JWKS_ENDPOINT"] == "https://auth.new901.io/oauth/v2/keys"
+    assert values["OIDC_OP_AUTHORIZATION_ENDPOINT"] == "https://auth.new901.io/login/oauth/authorize"
+    assert values["OIDC_OP_TOKEN_ENDPOINT"] == "https://auth.new901.io/api/login/oauth/access_token"
+    assert values["OIDC_OP_USER_ENDPOINT"] == "https://auth.new901.io/api/userinfo"
+    assert values["OIDC_OP_JWKS_ENDPOINT"] == "https://auth.new901.io/.well-known/jwks"
     assert values["OIDC_RP_CLIENT_ID"] != "395373995647565826"
     assert values["OIDC_DRF_AUTH_BACKEND"] == "django_jt.auth.oidc.OIDCBackend"
 
 
 def test_oidc_defaults_override_base():
     values = oidc_defaults(AUTH901_BASE_URL="https://auth.example.com")
-    assert values["OIDC_OP_TOKEN_ENDPOINT"] == "https://auth.example.com/oauth/v2/token"
-    assert values["OIDC_OP_JWKS_ENDPOINT"] == "https://auth.example.com/oauth/v2/keys"
+    assert values["OIDC_OP_TOKEN_ENDPOINT"] == "https://auth.example.com/api/login/oauth/access_token"
+    assert values["OIDC_OP_JWKS_ENDPOINT"] == "https://auth.example.com/.well-known/jwks"
 
 
 def test_oidc_defaults_prefer_env(monkeypatch):

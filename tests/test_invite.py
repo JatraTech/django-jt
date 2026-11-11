@@ -19,7 +19,11 @@ class _Reply:
 
 @pytest.mark.django_db
 def test_invite_member_creates_auth901_user(settings, monkeypatch):
+    settings.AUTH901_ORGANIZATION = ""
     settings.AUTH901_ORGANIZATION_ID = "org-1"
+    import tests.settings as test_settings
+
+    monkeypatch.setattr(test_settings, "AUTH901_ORGANIZATION", "")
     calls = []
 
     def post(url, **kwargs):

@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from django_jt.auth.base import link_auth901_sub
 from django_jt.auth.oidc import invite_user
 
 
@@ -45,7 +46,5 @@ def _local_user(email: str, given_name: str, family_name: str, sub: str):
             first_name=given_name,
             last_name=family_name,
         )
-    if hasattr(user, "auth901_sub"):
-        user.auth901_sub = sub
-        user.save(update_fields=["auth901_sub"])
+    link_auth901_sub(user, sub)
     return user

@@ -12,11 +12,13 @@ In another project:
 uv add "django-jt[all] @ git+https://github.com/JatraTech/django-jt.git"
 ```
 
-A specific branch:
+A specific branch or tag (e.g. after a release):
 
 ```text
-uv add "django-jt[all] @ git+https://github.com/JatraTech/django-jt.git@<branch-name>"
+uv add "django-jt[all] @ git+https://github.com/JatraTech/django-jt.git@v0.2.0"
 ```
+
+**Releasing 0.2.0+ (maintainers):** tag `v0.2.0` on the django-jt repo after merge. In consuming apps (new901-admin, condhoa-backend, etc.) run `uv lock --upgrade-package django-jt` or pin the git URL with `@v0.2.0`, then reinstall so `sync_auth901_users` and org fail-fast apply.
 
 In this repo:
 
@@ -113,15 +115,65 @@ urlpatterns = [
 
 `OIDCBackend` looks up users by `auth901_sub`, then email, and writes `sub`, email, and name claims onto the user.
 
-`POST /auth/invite/` (signed in) creates the person in Auth901 and emails them an invite. Install the `rest` extra. A service account calls Auth901; set these in settings or the environment:
+`POST /auth/invite/` (signed in) creates the person in Auth901 via `django_jt.auth.oidc.invite_user` and emails them an invite. Install the `rest` extra. A service account calls Auth901; set these in settings or the environment:
 
 ```python
 AUTH901_SERVICE_CLIENT_ID = "..."
 AUTH901_SERVICE_CLIENT_SECRET = "..."
-AUTH901_ORGANIZATION_ID = "..."  # optional
+AUTH901_ORGANIZATION_ID = "..."  # optional; or AUTH901_ORGANIZATION (see django_jt.auth.base)
 ```
 
 Body: `{"email", "given_name", "family_name"}`. The answer is `201 {"id", "email"}`, and the local user stores `id` on `auth901_sub`.
+
+Invite and sync both read organization from **`AUTH901_ORGANIZATION` or `AUTH901_ORGANIZATION_ID`** via `django_jt.auth.base.auth901_organization`. Bulk sync **requires** organization (the command fails fast if it is missing).
+
+**`AUTH901_SERVICE_SCOPES`:** invite (`oidc.invite_user`, `/oauth/v2/token`) and bulk sync (Casdoor `/api/login/oauth/access_token`) read the same setting. If it is unset, invite defaults to a Zitadel-style scope string and sync defaults to `openid`. Set one scope only when it works for both token endpoints in your Auth901 deployment.
+
+### Bulk sync to Auth901 (Casdoor admin API)
+
+Separate from invite/OIDC: `django_jt.auth.auth901_sync` and `manage.py sync_auth901_users` use Casdoor `/api/get-users` and `/api/add-user` via `provision_user` (one lookup when linking, two when creating). They do not change `oidc.invite_user`.
+
+Requires a machine client with permission to those APIs (delegated admin or equivalent), plus:
+
+```python
+AUTH901_SERVICE_CLIENT_ID = "..."
+AUTH901_SERVICE_CLIENT_SECRET = "..."
+AUTH901_ORGANIZATION = "new901"  # or AUTH901_ORGANIZATION_ID (same as invite)
+AUTH901_APPLICATION = "hrm"  # optional; signupApplication on new users
+```
+
+For users who exist locally but have not signed in with OIDC yet:
+
+```text
+python manage.py sync_auth901_users
+python manage.py sync_auth901_users --dry-run
+python manage.py sync_auth901_users --include-inactive
+python manage.py sync_auth901_users --repair
+```
+
+### Initial Casdoor password (optional)
+
+Sync does **not** copy Django password hashes. To set a shared initial password in Auth901 (dev/migration), use env or CLI (env wins):
+
+```text
+export AUTH901_SYNC_INITIAL_PASSWORD='your-dev-password'
+python manage.py sync_auth901_users --require-password-change
+```
+
+| Flag | Effect |
+|------|--------|
+| (default) | New Casdoor users get the initial password on `add-user` when configured; existing Auth901 users are unchanged |
+| `--require-password-change` | Sets `needUpdatePassword` on `add-user` when an initial password is set |
+
+Do not commit `AUTH901_SYNC_INITIAL_PASSWORD`. Prefer env over `--initial-password` (shell history). Use `--require-password-change` outside local dev when everyone shares one initial password.
+
+By default the command processes **active** users with a non-empty email and a blank `auth901_sub`. It looks up Auth901 by **email** before creating anyone, so the same person synced from two apps gets the **same** `auth901_sub` when they already exist in Auth901. **First project wins:** only the first create sets Casdoor login **`name`** (from the Django **`username`**, sanitized) and profile (`first_name`/`last_name`, or a single `name` field split for display). A later app sync only backfills local `auth901_sub` and does not call `update-user` on Auth901. If Casdoor rejects a taken `name`, sync retries once with the email local-part. OIDC login still links users on first sign-in; sync is for backfill and migration.
+
+Users already in Auth901 with an old naming scheme (for example Casdoor `name` from email only) are not renamed by default sync or `--repair` when the email still matches; fix in the Auth901 UI or delete the Casdoor user and run `--repair` to recreate with current rules.
+
+If someone is removed from Auth901 but the project still has `auth901_sub`, default sync reports **`skipped_linked`** and does not fix them. Use **`--repair`** after IdP deletes: each linked user gets an email lookup—relink when Casdoor has a new `id`, recreate when the email is missing in Auth901 (one extra lookup per user already linked). OIDC login can also refresh `auth901_sub` via email match when the user signs in again.
+
+Browser login uses Casdoor-shaped OIDC endpoints from `defaults.py`; invite uses the service API implemented in `oidc.py` — your Auth901 deployment may expose both until admin APIs are unified.
 
 ## Request id
 
