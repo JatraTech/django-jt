@@ -22,11 +22,18 @@ uv add "django-jt[all] @ git+https://github.com/JatraTech/django-jt.git@v0.3.0"
 
 **Releasing 0.3.0+ (maintainers):** tag `v0.3.0` on the django-jt repo after merge. In consuming apps (new901-admin, condhoa-backend, etc.) run `uv lock --upgrade-package django-jt` or pin the git URL with `@v0.2.0`, then reinstall so `sync_auth901_users` and org fail-fast apply.
 
-In this repo:
+## Development
+
+Clone this repository:
 
 ```text
 uv sync --all-extras --group dev
-uv run pytest
+```
+
+## Verification
+
+```text
+uv run pytest -q
 ```
 
 pip fallback: `pip install -e ".[all]"`.
