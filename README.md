@@ -236,6 +236,22 @@ CORS_EXPOSE_HEADERS = (..., "X-Request-ID")
 
 `django_jt` in `INSTALLED_APPS` clears the id on `request_finished`. Call `django_jt.request_id.connect_celery()` from the Celery app if background tasks should keep the same id.
 
+## DRF viewsets
+
+`BaseModelViewSet` subclasses set a default `serializer_class` and optionally override per DRF action with **`action_serializers`** (keys match `self.action`, including custom `@action` names). Versioned APIs can use keys like `f"{action}_{version}"`.
+
+```python
+from django_jt.mixins.views import BaseModelViewSet
+
+class ThingViewSet(BaseModelViewSet):
+    serializer_class = ThingSerializer
+    action_serializers = {
+        "upload_file": ThingUploadSerializer,
+    }
+```
+
+Clients can pass `?extend_fields=foo,bar` to opt into extra serializer fields via `ExtendableModelSerializer`.
+
 ## Other utilities
 
 ```python

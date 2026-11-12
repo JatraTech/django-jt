@@ -50,6 +50,16 @@ class BaseModelSerializer(ModelSerializer):
         if isinstance(instance, ModelMixin):
             for i in self.Meta.model.get_choice_fields():
                 data[f"{i}_display"] = getattr(instance, f"get_{i}_display")()
+
+        representor_serializers = getattr(self, "representor_serializers", {})
+        for field_name, serializer_class in representor_serializers.items():
+            related_instance = getattr(instance, field_name, None)
+            if related_instance:
+                data[field_name] = serializer_class(
+                    related_instance,
+                    context=self.context,
+                ).data
+
         return data
 
 

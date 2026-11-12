@@ -11,6 +11,7 @@ class AudienceFilterFn(Protocol):
 
     def __call__(self, user) -> Q: ...
 
+
 try:
     from drf_spectacular.utils import OpenApiParameter, extend_schema
 except ImportError:
@@ -51,19 +52,19 @@ class BaseModelViewSet(
     BaseListView,
     viewsets.ModelViewSet,
 ):
-    serializers = {}
+    action_serializers = {}
 
     def get_serializer_class(self):
         action = self.action
         version = getattr(self.request, "version", None)
 
         if version:
-            return self.serializers.get(
+            return self.action_serializers.get(
                 f"{action}_{version}",
-                self.serializers.get(action, self.serializer_class),
+                self.action_serializers.get(action, self.serializer_class),
             )
 
-        return self.serializers.get(action, self.serializer_class)
+        return self.action_serializers.get(action, self.serializer_class)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
