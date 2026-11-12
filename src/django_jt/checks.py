@@ -1,7 +1,10 @@
 """Deploy-time Django system checks."""
 
+from django.apps import apps
 from django.conf import settings
-from django.core.checks import Error, register
+from django.core.checks import Error, Warning, register
+
+from django_jt.auth.defaults import auth901_oidc_enabled
 
 _APP_ENV_VALUES = frozenset({"local", "staging", "production"})
 
@@ -37,3 +40,18 @@ def validate_app_env(app_configs, **kwargs):
                 )
             )
     return out
+
+
+@register()
+def auth901_oidc_installed_apps(app_configs, **kwargs):
+    if not auth901_oidc_enabled():
+        return []
+    if apps.is_installed("mozilla_django_oidc"):
+        return []
+    return [
+        Warning(
+            "AUTH901 OIDC is enabled but mozilla_django_oidc is not in INSTALLED_APPS.",
+            hint="Add mozilla_django_oidc to INSTALLED_APPS for admin login and /oidc/ routes.",
+            id="django_jt.E002",
+        )
+    ]

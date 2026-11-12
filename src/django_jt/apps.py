@@ -34,6 +34,9 @@ class DjangoJTConfig(AppConfig):
 
         if auth901_oidc_enabled():
             apply_oidc_defaults()
+        from django_jt.admin_login import prepend_oidc_admin_login_templates
+
+        prepend_oidc_admin_login_templates()
         connect_request_finished()
         register(check_encryption_keys)
         import django_jt.backends.email.tasks  # noqa: F401 — register Celery email tasks

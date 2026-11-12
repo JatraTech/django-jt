@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.2
+
+- **Auth901:** When `auth901_oidc_enabled()`, prepend `django_jt/templates` so `/admin/login/` shows OIDC-only login (Backstage UI when `backstage` is installed, minimal stock fallback otherwise). System check `django_jt.E002` when OIDC is on but `mozilla_django_oidc` is missing from `INSTALLED_APPS`.
+
 ## 0.3.1
 
 - **Ordering:** `ProximityOrderingFilter` — `?ordering==date_field` for closest date/datetime (PostgreSQL `Extract` epoch); nulls-last on other terms.

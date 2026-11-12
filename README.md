@@ -156,6 +156,8 @@ urlpatterns = [
 ]
 ```
 
+**Admin login:** With `AUTH901_CLIENT_ID` set and `mozilla_django_oidc` installed, `django_jt` prepends its templates directory so Django admin uses Auth901 OIDC instead of the username/password form. Install **django-backstage** for the branded Backstage login page; without Backstage, a minimal stock template with the same OIDC link is used. Optional `LOGIN_REDIRECT_URL = "/admin/"`. Do not ship a project-local `admin/login.html` unless you intentionally override this behavior.
+
 `OIDCBackend` looks up users by `auth901_sub`, then email, and writes `sub`, email, and name claims onto the user.
 
 `POST /auth/invite/` (signed in) creates the person in Auth901 via `django_jt.auth.oidc.invite_user` and emails them an invite. Install the `rest` extra. Service API calls use `auth901_service_credentials()`: set **`AUTH901_SERVICE_CLIENT_ID` / `AUTH901_SERVICE_CLIENT_SECRET`**, or omit them and use the same **`AUTH901_CLIENT_ID` / `AUTH901_CLIENT_SECRET`** as browser OIDC when that Casdoor app allows client credentials (typical local dev). Production should use a dedicated M2M client via `AUTH901_SERVICE_*`.
