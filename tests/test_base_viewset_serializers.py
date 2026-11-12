@@ -11,15 +11,23 @@ class _DummySerializer(serializers.Serializer):
     pass
 
 
-class _LegacyViewSet(BaseModelViewSet):
+class _OtherSerializer(serializers.Serializer):
+    pass
+
+
+class _ActionSerializersViewSet(BaseModelViewSet):
     serializer_class = _DummySerializer
-    serializers = {}
-    action_serializers = {"custom": _DummySerializer}
+    action_serializers = {"custom": _OtherSerializer}
+
+
+class _LegacySerializersAttrViewSet(BaseModelViewSet):
+    serializer_class = _DummySerializer
+    serializers = {"custom": _OtherSerializer}
 
 
 class BaseModelViewSetActionSerializersTests(SimpleTestCase):
-    def test_action_serializers_deprecated_fallback(self) -> None:
-        view = _LegacyViewSet()
+    def test_action_serializers_resolves_per_action(self) -> None:
+        view = _ActionSerializersViewSet()
         view.action = "custom"
         view.request = MagicMock()
         view.request.version = None
@@ -28,5 +36,13 @@ class BaseModelViewSetActionSerializersTests(SimpleTestCase):
             warnings.simplefilter("always")
             resolved = view.get_serializer_class()
 
-        self.assertIs(resolved, _DummySerializer)
-        self.assertTrue(any("action_serializers" in str(w.message) for w in caught))
+        self.assertIs(resolved, _OtherSerializer)
+        self.assertFalse(caught)
+
+    def test_legacy_serializers_attr_is_ignored(self) -> None:
+        view = _LegacySerializersAttrViewSet()
+        view.action = "custom"
+        view.request = MagicMock()
+        view.request.version = None
+
+        self.assertIs(view.get_serializer_class(), _DummySerializer)

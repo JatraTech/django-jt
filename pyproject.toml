@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "django-jt"
-version = "0.3.2"
+version = "0.3.3"
 description = "JatraTech Django toolkit: Auth901 OIDC and Casdoor user sync, DRF helpers (pagination, filters, proximity ordering, XLSX export, analytics), Postmaster/Gmail/Graph email, model mixins, encrypted fields, and request-ID middleware."
 readme = "README.md"
 requires-python = ">=3.10"

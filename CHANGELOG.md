@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.3
+
+- **BREAKING:** `BaseModelViewSet` uses **`action_serializers`** only for per-action serializer maps; the `serializers` class attribute is no longer read. Migrate viewsets that set `serializers = {...}` to `action_serializers`.
+
 ## 0.3.2
 
 - **Auth901:** When `auth901_oidc_enabled()`, prepend `django_jt/templates` so `/admin/login/` shows OIDC-only login (Backstage UI when `backstage` is installed, minimal stock fallback otherwise). System check `django_jt.E002` when OIDC is on but `mozilla_django_oidc` is missing from `INSTALLED_APPS`.
