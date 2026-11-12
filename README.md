@@ -33,8 +33,6 @@ This package ships a single manual at the repo root—no `docs/` tree.
 
 **Naming:** Root docs use `README.md` and `CHANGELOG.md` only. [django-template](https://github.com/JatraTech/django-template) and [django-backstage](https://github.com/JatraTech/django-backstage) use **SCREAMING_SNAKE.md** for topic files under `docs/` (and `docs/architecture/` on the template).
 
-Internal snapshots: `unported/README.md` (not published).
-
 ## Development
 
 Clone this repository:
@@ -268,6 +266,6 @@ See `django_jt.backends.email.gmail` and `django_jt.backends.email.graph`. Manag
 
 Encrypted fields read `settings.FIELD_ENCRYPTION_KEYS` (a list of Fernet keys). The first key encrypts; every key can decrypt.
 
-## Host-coupled code
+## Out of package scope (0.3.x)
 
-Tenant, audit, and blueprint-specific modules live in `unported/` and are not installed. They still depend on host apps such as `tenancy` and `audit`.
+Multi-tenant viewsets, L1 `record_viewset` factories, and audit/blueprint-specific API helpers are **not** in the installable package. Multi-tenant products (e.g. MemBlue, 901Levee) keep them under local `app/utils/` until a future optional extra with injectable host settings.

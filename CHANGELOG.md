@@ -14,6 +14,7 @@
 - **Celery email:** `send_gmail_emails` / `send_graph_emails` register in `DjangoJTConfig.ready()`; hosts need not duplicate tasks in `app.tasks`.
 - **Health:** `django_jt.health.liveness` and `readiness` (DB + optional Redis broker).
 - **OpenAPI UI:** `django_jt.drf.spectacular.SpectacularElementsView` and `SpectacularRapiDocView`.
+- **Docs:** Removed unused `unported/` archive (tenancy/L1 snapshots); no API change.
 
 ## 0.2.0
 
