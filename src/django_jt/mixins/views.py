@@ -1,3 +1,5 @@
+import warnings
+import warnings
 from typing import Hashable, Protocol
 
 from django.db.models import Q
@@ -52,18 +54,32 @@ class BaseModelViewSet(
     viewsets.ModelViewSet,
 ):
     serializers = {}
+    action_serializers = {}  # deprecated: use ``serializers``
+
+    def _per_action_serializers(self) -> dict:
+        if self.serializers:
+            return self.serializers
+        legacy = getattr(self, "action_serializers", None) or {}
+        if legacy:
+            warnings.warn(
+                "action_serializers is deprecated on BaseModelViewSet; use serializers instead.",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+        return legacy
 
     def get_serializer_class(self):
         action = self.action
         version = getattr(self.request, "version", None)
+        mapping = self._per_action_serializers()
 
         if version:
-            return self.serializers.get(
+            return mapping.get(
                 f"{action}_{version}",
-                self.serializers.get(action, self.serializer_class),
+                mapping.get(action, self.serializer_class),
             )
 
-        return self.serializers.get(action, self.serializer_class)
+        return mapping.get(action, self.serializer_class)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
