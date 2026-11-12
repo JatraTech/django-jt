@@ -1,3 +1,8 @@
+import re
+from urllib.parse import urlparse
+
+from django.conf import settings
+from django.db.models import FileField, ImageField
 from rest_framework import serializers
 from rest_framework.fields import empty
 from rest_framework.serializers import Field, ModelSerializer
@@ -29,6 +34,16 @@ class BaseModelSerializer(ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        request = self.context.get("request")
+
+        if self.Meta.model:
+            for field in self.Meta.model._meta.get_fields():
+                field_name = field.name
+                if field_name not in data or not isinstance(field, (ImageField, FileField)):
+                    continue
+                field_value = getattr(instance, field_name, None)
+                data[field_name] = get_image_url(request, field_value)
+
         if isinstance(instance, CodeModelMixin):
             data["full_code"] = instance.full_code
         if isinstance(instance, ModelMixin):
@@ -51,3 +66,40 @@ class ExtendableModelSerializer(BaseModelSerializer):
 
 class URLSerializer(serializers.Serializer):
     url = serializers.URLField()
+
+
+def get_image_url(request, file_field) -> str | None:
+    if not file_field:
+        return None
+    try:
+        url = file_field.url
+    except (ValueError, AttributeError):
+        return None
+
+    if urlparse(url).scheme in ("http", "https"):
+        return url
+
+    if request:
+        return request.build_absolute_uri(url)
+
+    return f"http://localhost:8000{url}" if settings.DEBUG else url
+
+
+MEDIA_SRC_PATTERN = re.compile(r'src="(/media/[^"]+)"')
+
+
+def resolve_content_media_urls(html: str, request) -> str:
+    if not html or not request:
+        return html
+
+    return MEDIA_SRC_PATTERN.sub(
+        lambda match: f'src="{request.build_absolute_uri(match.group(1))}"',
+        html,
+    )
+
+
+def resolve_rich_text_fields(data: dict, fields: list[str], request) -> dict:
+    for name in fields:
+        if data.get(name):
+            data[name] = resolve_content_media_urls(data[name], request)
+    return data

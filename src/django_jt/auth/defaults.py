@@ -7,6 +7,7 @@ DEFAULT_AUTH901_BASE_URL = "https://auth.new901.io"
 __all__ = [
     "DEFAULT_AUTH901_BASE_URL",
     "apply_oidc_defaults",
+    "auth901_oidc_enabled",
     "oidc_defaults",
     "provider_logout",
 ]
@@ -35,6 +36,22 @@ def _setting(name, default=None):
             if value not in (None, ""):
                 return value
     return default
+
+
+def auth901_oidc_enabled() -> bool:
+    """Whether Auth901 browser OIDC should be active for this host.
+
+    True when ``AUTH901_CLIENT_ID`` is set and ``mozilla_django_oidc`` is installed.
+    JWT-only hosts leave the client id unset (env and settings) and omit OIDC URLs.
+    """
+    client_id = (_setting("AUTH901_CLIENT_ID") or "").strip()
+    if not client_id:
+        return False
+    try:
+        import mozilla_django_oidc  # noqa: F401
+    except ImportError:
+        return False
+    return True
 
 
 def oidc_defaults(**overrides) -> dict:

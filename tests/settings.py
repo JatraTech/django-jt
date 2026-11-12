@@ -1,3 +1,7 @@
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
 SECRET_KEY = "django-jt-tests"
 DEBUG = True
 USE_TZ = True

@@ -15,10 +15,12 @@ uv add "django-jt[all] @ git+https://github.com/JatraTech/django-jt.git"
 A specific branch or tag (e.g. after a release):
 
 ```text
-uv add "django-jt[all] @ git+https://github.com/JatraTech/django-jt.git@v0.2.0"
+uv add "django-jt[all] @ git+https://github.com/JatraTech/django-jt.git@v0.3.0"
 ```
 
-**Releasing 0.2.0+ (maintainers):** tag `v0.2.0` on the django-jt repo after merge. In consuming apps (new901-admin, condhoa-backend, etc.) run `uv lock --upgrade-package django-jt` or pin the git URL with `@v0.2.0`, then reinstall so `sync_auth901_users` and org fail-fast apply.
+**Office default:** install `django-jt[all]` once; enable only the features you wire in settings (see [Feature recipes](#feature-recipes)).
+
+**Releasing 0.3.0+ (maintainers):** tag `v0.3.0` on the django-jt repo after merge. In consuming apps (new901-admin, condhoa-backend, etc.) run `uv lock --upgrade-package django-jt` or pin the git URL with `@v0.2.0`, then reinstall so `sync_auth901_users` and org fail-fast apply.
 
 In this repo:
 
@@ -39,7 +41,27 @@ Optional extras:
 | `email` | `requests` (Postmaster backend) |
 | `errors` | `drf-standardized-errors` |
 | `oidc` | `mozilla-django-oidc` (Auth901 login) |
-| `all` | Everything above |
+| `analytics` | `pydantic`, `polars`, `styleframe` (analytics payloads + XLSX export) |
+| `all` | Everything above, plus Pillow, Google Gmail API, MSAL (Graph mail), and analytics deps |
+
+## Feature recipes
+
+Install is the same for every profile: **`django-jt[all]`**. Runtime wiring picks what runs.
+
+| Profile | Enable |
+|--------|--------|
+| **DRF mixins only** | Import `django_jt.mixins.*`, `pagination`, `filters`; no Auth901 settings |
+| **JWT / no Auth901** | Leave `AUTH901_CLIENT_ID` unset; do not include `django_jt.urls` for OIDC; optional `AUTHENTICATION_BACKENDS = ["django_jt.backends.authentication.StatusBackend"]` for Django admin session login |
+| **Auth901 browser login** | `mozilla_django_oidc` in `INSTALLED_APPS`, `AUTH901_CLIENT_ID`, backends, `include("django_jt.urls")` |
+| **Postmaster mail** | `EMAIL_BACKEND = "django_jt.backends.email.postmaster.PostMasterEmailBackend"` |
+| **Gmail API** | Same backend path pattern: `django_jt.backends.email.gmail.GmailBackend`; `manage.py gmail_oauth_token` |
+| **Microsoft Graph** | `django_jt.backends.email.graph.GraphEmailBackend`; `manage.py graph_auth` |
+| **Request id** | `django_jt.request_id.RequestIdMiddleware` + log filter |
+| **Audience-scoped lists** | `REST_FRAMEWORK["DEFAULT_FILTER_BACKENDS"]` includes `django_jt.filters.AudienceFilter`; set `audience_lookups` on viewsets |
+| **Analytics / XLSX export** | `from django_jt.analytics import AnalyticsData`; mixins in `django_jt.mixins.analytics` and `django_jt.mixins.export` |
+| **Legacy admin gate** | `django_jt.permissions.AdminOnly`; optional `DJANGO_JT_ADMIN_ROLES = ["admin", "super_admin"]` |
+
+Async outbound mail (optional): Gmail/Graph queue when `CELERY_TASK_ALWAYS_EAGER` is set or a Celery worker responds to ping; otherwise the web process sends synchronously. Celery tasks `django_jt.backends.email.tasks.send_gmail_emails` / `send_graph_emails` register when `django_jt` is in `INSTALLED_APPS` (no host `app.tasks` mirror required). Workers must load Django (`DJANGO_SETTINGS_MODULE`) so `DjangoJTConfig.ready()` runs.
 
 ## Custom user model
 
@@ -67,7 +89,9 @@ INSTALLED_APPS = [
 
 ## Auth901 / mozilla-django-oidc
 
-Install the `oidc` extra. Defaults assume `AUTH901_BASE_URL=https://auth.new901.io` with PKCE (S256) and RS256. **`AUTH901_CLIENT_ID` has no package default** — set it in settings or the environment (example: `395373995647565826`).
+Install the `oidc` extra (included in `[all]`). Defaults assume `AUTH901_BASE_URL=https://auth.new901.io` with PKCE (S256) and RS256. **`AUTH901_CLIENT_ID` has no package default** — set it in settings or the environment (example: `395373995647565826`).
+
+OIDC settings are applied from `AUTH901_*` only when **`AUTH901_CLIENT_ID`** is set and `mozilla_django_oidc` is installed. JWT-only hosts leave the client id unset.
 
 ```python
 # settings.py
@@ -195,9 +219,10 @@ CORS_EXPOSE_HEADERS = (..., "X-Request-ID")
 
 ```python
 from django_jt.mixins.models import ModelMixin, NameModelMixin, CodeModelMixin
-from django_jt.fields import AmountField, EncryptedTextField
+from django_jt.fields import AmountField, EncryptedTextField, OptimizedImageField
 from django_jt.pagination import StandardPagination
 from django_jt.backends.email.postmaster import PostMasterEmailBackend
+from django_jt.middleware import OverrideContentTypeMiddleware
 ```
 
 `ModelMixin` uses `UserForeignKey`. Projects that use it should add `django_userforeignkey` to `INSTALLED_APPS`.
@@ -211,6 +236,15 @@ from django_jt.backends.email.postmaster import PostMasterEmailBackend
 - **One IdP user's bucket:** set `PostMasterEmailBackend.user_sub` to that user's subject. Optional `from_email` / `provider_name` still narrow the row within that bucket.
 
 Requires the `email` extra (`requests`).
+
+## Gmail and Graph email
+
+See `django_jt.backends.email.gmail` and `django_jt.backends.email.graph`. Management commands: `gmail_oauth_token`, `graph_auth`. Celery tasks live in `django_jt.backends.email.tasks` and register via `DjangoJTConfig.ready()`.
+
+## Health and OpenAPI UI
+
+- **Probes:** `django_jt.health.liveness` and `django_jt.health.readiness` — wire in root `urls.py`, e.g. `path("healthz", liveness)` (optional `readiness` for k8s).
+- **Schema browsers:** `django_jt.drf.spectacular.SpectacularElementsView` and `SpectacularRapiDocView` (host still provides `elements.html` / `rapidoc.html` templates).
 
 Encrypted fields read `settings.FIELD_ENCRYPTION_KEYS` (a list of Fernet keys). The first key encrypts; every key can decrypt.
 

@@ -3,7 +3,7 @@ from datetime import date
 
 from django.utils.timezone import datetime, timedelta
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 
 def str_to_bool(value) -> bool:

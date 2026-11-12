@@ -1,6 +1,15 @@
+from typing import Hashable, Protocol
+
+from django.db.models import Q
 from rest_framework import generics, viewsets
 
 from django_jt.pagination import StandardPagination
+
+
+class AudienceFilterFn(Protocol):
+    """Build a ``Q`` filter from the authenticated user (for ``audience_lookups`` callables)."""
+
+    def __call__(self, user) -> Q: ...
 
 try:
     from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -20,7 +29,8 @@ class BaseListView(generics.ListAPIView):
     # None on purpose: django_jt.filters.FilterBackend builds each list's FilterSet from
     # ``filterset_fields`` on top of BaseModelFilterSet.
     filterset_class = None
-    audience_lookups: dict = {}
+    # role (or hashable) -> lookup field name or AudienceFilterFn callable
+    audience_lookups: dict[Hashable, AudienceFilterFn | str] = {}
     ordering_fields = "__all__"
     ordering_field_map = {}
     extra_search_fields = []

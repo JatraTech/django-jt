@@ -28,9 +28,12 @@ class DjangoJTConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
 
     def ready(self):
-        from django_jt.auth.defaults import apply_oidc_defaults
+        import django_jt.checks  # noqa: F401 — register validate_app_env
+        from django_jt.auth.defaults import apply_oidc_defaults, auth901_oidc_enabled
         from django_jt.request_id import connect_request_finished
 
-        apply_oidc_defaults()
+        if auth901_oidc_enabled():
+            apply_oidc_defaults()
         connect_request_finished()
         register(check_encryption_keys)
+        import django_jt.backends.email.tasks  # noqa: F401 — register Celery email tasks

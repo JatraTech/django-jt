@@ -1,10 +1,11 @@
 import operator
+from collections.abc import Callable
 from functools import reduce
 from typing import ClassVar
 
 from django.db.models import Q
 from django_filters import rest_framework as dj_filters
-from rest_framework.filters import SearchFilter as SearchFilter_
+from rest_framework.filters import BaseFilterBackend, SearchFilter as SearchFilter_
 
 from django_jt.mixins.models import NameModelMixin
 
@@ -150,3 +151,20 @@ class ExtendedSearchFilter(SearchFilter):
         )
 
         return (queryset | view.get_queryset().filter(or_filter)).distinct()
+
+
+class AudienceFilter(BaseFilterBackend):
+    """Scope list querysets by ``view.audience_lookups`` keyed on ``request.user.user_role``."""
+
+    def filter_queryset(self, request, queryset, view):
+        user = request.user
+        if not view.authentication_classes:
+            return queryset
+        role = getattr(user, "user_role", None)
+        audience_lookups = getattr(view, "audience_lookups", None) or {}
+        if role is None or role not in audience_lookups:
+            return queryset
+        entry = audience_lookups[role]
+        if isinstance(entry, Callable):
+            return queryset.filter(entry(user))
+        return queryset.filter(**{entry: user})
