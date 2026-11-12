@@ -22,6 +22,19 @@ uv add "django-jt[all] @ git+https://github.com/JatraTech/django-jt.git@v0.3.0"
 
 **Releasing 0.3.0+ (maintainers):** tag `v0.3.0` on the django-jt repo after merge. In consuming apps (new901-admin, condhoa-backend, etc.) run `uv lock --upgrade-package django-jt` or pin the git URL with `@v0.2.0`, then reinstall so `sync_auth901_users` and org fail-fast apply.
 
+## Documentation
+
+This package ships a single manual at the repo root—no `docs/` tree.
+
+| File | Purpose |
+|------|---------|
+| `README.md` (this file) | Install, feature recipes, API surface |
+| [CHANGELOG.md](CHANGELOG.md) | Release notes |
+
+**Naming:** Root docs use `README.md` and `CHANGELOG.md` only. [django-template](https://github.com/JatraTech/django-template) and [django-backstage](https://github.com/JatraTech/django-backstage) use **SCREAMING_SNAKE.md** for topic files under `docs/` (and `docs/architecture/` on the template).
+
+Internal snapshots: `unported/README.md` (not published).
+
 ## Development
 
 Clone this repository:
