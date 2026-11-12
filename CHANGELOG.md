@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.1
+
+- **Ordering:** `ProximityOrderingFilter` — `?ordering==date_field` for closest date/datetime (PostgreSQL `Extract` epoch); nulls-last on other terms.
+- **Pagination:** `StandardLimitOffsetPagination`, `StandardCursorPagination`.
+- **Serializers:** `ContentTypeByNameSerializer` (`app_label.model` ↔ `ContentType`).
+- **Helpers:** `format_duration_hhmmss`, `format_duration_hhmmday` on package root.
+- **Auth901:** `auth901_service_credentials()` falls back to `AUTH901_CLIENT_ID` / `AUTH901_CLIENT_SECRET` when `AUTH901_SERVICE_*` is unset (local shared Casdoor app; prod can still set a dedicated M2M client).
+- **Auth901:** Optional `AUTH901_APPLICATION` sets Casdoor `signupApplication` on users created by sync.
+- **Auth901:** Sync options are CLI-only (`--initial-password`, `--dry-run`, `--repair`, `--require-password-change`); removed `AUTH901_SYNC_INITIAL_PASSWORD` and `auth901_sync_initial_password()`.
+
 ## 0.3.0
 
 - **OIDC:** `auth901_oidc_enabled()` in `auth.defaults` — browser OIDC when `AUTH901_CLIENT_ID` is set and `mozilla_django_oidc` is installed; `apply_oidc_defaults` and `/oidc/` routes gated the same way. JWT hosts leave the client id unset.

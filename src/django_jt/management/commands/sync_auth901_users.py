@@ -7,17 +7,12 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 
 from django_jt.auth.auth901_sync import (
-    Auth901Error,
     SyncOutcome,
     SyncPasswordOptions,
     reset_casdoor_token,
     sync_user,
 )
-from django_jt.auth.base import (
-    auth901_organization,
-    auth901_service_credentials,
-    auth901_sync_initial_password,
-)
+from django_jt.auth.base import auth901_organization, auth901_service_credentials
 
 
 class Command(BaseCommand):
@@ -42,7 +37,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--initial-password",
             default=None,
-            help="Initial Casdoor password for new users (overridden by AUTH901_SYNC_INITIAL_PASSWORD).",
+            help="Initial Casdoor password for new users.",
         )
         parser.add_argument(
             "--require-password-change",
@@ -54,7 +49,7 @@ class Command(BaseCommand):
         dry_run: bool = options["dry_run"]
         include_inactive: bool = options["include_inactive"]
         repair: bool = options["repair"]
-        initial_password = auth901_sync_initial_password(cli_value=options["initial_password"])
+        initial_password = (options["initial_password"] or "").strip() or None
 
         password_options = SyncPasswordOptions(
             initial_password=initial_password,
@@ -92,7 +87,9 @@ class Command(BaseCommand):
                 )
             except Exception as exc:
                 outcome = SyncOutcome.ERROR
-                self.stderr.write(self.style.ERROR(f"{user.email}: unexpected error: {exc}"))
+                self.stderr.write(
+                    self.style.ERROR(f"{user.email}: unexpected error: {exc}")
+                )
             counts[outcome.value] += 1
             self.stdout.write(f"{user.email}: {outcome.value}")
 
@@ -104,4 +101,6 @@ class Command(BaseCommand):
                 self.stdout.write(f"  {key.value}: {count}")
 
         if dry_run:
-            self.stdout.write(self.style.WARNING("Dry run — no auth901_sub updates were saved."))
+            self.stdout.write(
+                self.style.WARNING("Dry run — no auth901_sub updates were saved.")
+            )

@@ -21,7 +21,9 @@ ROOT_URLCONF = "tests.urls"
 
 AUTH901_BASE_URL = "https://auth.new901.io"
 AUTH901_CLIENT_ID = "test-client-id"
+AUTH901_CLIENT_SECRET = "test-client-secret"
 AUTH901_ORGANIZATION = "built-in"
+AUTH901_APPLICATION = ""
 AUTH901_SERVICE_CLIENT_ID = "svc"
 AUTH901_SERVICE_CLIENT_SECRET = "secret"
 

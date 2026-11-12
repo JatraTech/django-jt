@@ -76,6 +76,7 @@ Install is the same for every profile: **`django-jt[all]`**. Runtime wiring pick
 | **Microsoft Graph** | `django_jt.backends.email.graph.GraphEmailBackend`; `manage.py graph_auth` |
 | **Request id** | `django_jt.request_id.RequestIdMiddleware` + log filter |
 | **Audience-scoped lists** | `REST_FRAMEWORK["DEFAULT_FILTER_BACKENDS"]` includes `django_jt.filters.AudienceFilter`; set `audience_lookups` on viewsets |
+| **Date proximity sort** | Add `django_jt.ordering.ProximityOrderingFilter`; use `?ordering==due_at` on date fields (PostgreSQL) |
 | **Analytics / XLSX export** | `from django_jt.analytics import AnalyticsData`; mixins in `django_jt.mixins.analytics` and `django_jt.mixins.export` |
 | **Legacy admin gate** | `django_jt.permissions.AdminOnly`; optional `DJANGO_JT_ADMIN_ROLES = ["admin", "super_admin"]` |
 
@@ -157,10 +158,10 @@ urlpatterns = [
 
 `OIDCBackend` looks up users by `auth901_sub`, then email, and writes `sub`, email, and name claims onto the user.
 
-`POST /auth/invite/` (signed in) creates the person in Auth901 via `django_jt.auth.oidc.invite_user` and emails them an invite. Install the `rest` extra. A service account calls Auth901; set these in settings or the environment:
+`POST /auth/invite/` (signed in) creates the person in Auth901 via `django_jt.auth.oidc.invite_user` and emails them an invite. Install the `rest` extra. Service API calls use `auth901_service_credentials()`: set **`AUTH901_SERVICE_CLIENT_ID` / `AUTH901_SERVICE_CLIENT_SECRET`**, or omit them and use the same **`AUTH901_CLIENT_ID` / `AUTH901_CLIENT_SECRET`** as browser OIDC when that Casdoor app allows client credentials (typical local dev). Production should use a dedicated M2M client via `AUTH901_SERVICE_*`.
 
 ```python
-AUTH901_SERVICE_CLIENT_ID = "..."
+AUTH901_SERVICE_CLIENT_ID = "..."  # optional if CLIENT_* has client_credentials + admin APIs
 AUTH901_SERVICE_CLIENT_SECRET = "..."
 AUTH901_ORGANIZATION_ID = "..."  # optional; or AUTH901_ORGANIZATION (see django_jt.auth.base)
 ```
@@ -178,10 +179,11 @@ Separate from invite/OIDC: `django_jt.auth.auth901_sync` and `manage.py sync_aut
 Requires a machine client with permission to those APIs (delegated admin or equivalent), plus:
 
 ```python
+# SERVICE_* optional when OIDC CLIENT_* is enabled for client credentials (sync uses SERVICE first, else CLIENT)
 AUTH901_SERVICE_CLIENT_ID = "..."
 AUTH901_SERVICE_CLIENT_SECRET = "..."
 AUTH901_ORGANIZATION = "new901"  # or AUTH901_ORGANIZATION_ID (same as invite)
-AUTH901_APPLICATION = "hrm"  # optional; signupApplication on new users
+AUTH901_APPLICATION = "hrm"  # optional; signupApplication on new users from sync
 ```
 
 For users who exist locally but have not signed in with OIDC yet:
@@ -195,19 +197,18 @@ python manage.py sync_auth901_users --repair
 
 ### Initial Casdoor password (optional)
 
-Sync does **not** copy Django password hashes. To set a shared initial password in Auth901 (dev/migration), use env or CLI (env wins):
+Sync does **not** copy Django password hashes. To set a shared initial password in Auth901 (dev/migration), pass CLI flags:
 
 ```text
-export AUTH901_SYNC_INITIAL_PASSWORD='your-dev-password'
-python manage.py sync_auth901_users --require-password-change
+python manage.py sync_auth901_users --initial-password 'your-dev-password' --require-password-change
 ```
 
 | Flag | Effect |
 |------|--------|
-| (default) | New Casdoor users get the initial password on `add-user` when configured; existing Auth901 users are unchanged |
+| (default) | New Casdoor users get the initial password on `add-user` when `--initial-password` is set; existing Auth901 users are unchanged |
 | `--require-password-change` | Sets `needUpdatePassword` on `add-user` when an initial password is set |
 
-Do not commit `AUTH901_SYNC_INITIAL_PASSWORD`. Prefer env over `--initial-password` (shell history). Use `--require-password-change` outside local dev when everyone shares one initial password.
+Avoid putting real passwords in shell history if your environment logs commands; use your usual secret-handling approach for one-off migrations.
 
 By default the command processes **active** users with a non-empty email and a blank `auth901_sub`. It looks up Auth901 by **email** before creating anyone, so the same person synced from two apps gets the **same** `auth901_sub` when they already exist in Auth901. **First project wins:** only the first create sets Casdoor login **`name`** (from the Django **`username`**, sanitized) and profile (`first_name`/`last_name`, or a single `name` field split for display). A later app sync only backfills local `auth901_sub` and does not call `update-user` on Auth901. If Casdoor rejects a taken `name`, sync retries once with the email local-part. OIDC login still links users on first sign-in; sync is for backfill and migration.
 
@@ -236,9 +237,17 @@ CORS_EXPOSE_HEADERS = (..., "X-Request-ID")
 ## Other utilities
 
 ```python
+from django_jt import format_duration_hhmmss
 from django_jt.mixins.models import ModelMixin, NameModelMixin, CodeModelMixin
+from django_jt.mixins.serializers import ContentTypeByNameSerializer
 from django_jt.fields import AmountField, EncryptedTextField, OptimizedImageField
-from django_jt.pagination import StandardPagination
+from django_jt.ordering import CustomOrderingFilter, ProximityOrderingFilter
+from django_jt.pagination import (
+    DummyPagination,
+    StandardCursorPagination,
+    StandardLimitOffsetPagination,
+    StandardPagination,
+)
 from django_jt.backends.email.postmaster import PostMasterEmailBackend
 from django_jt.middleware import OverrideContentTypeMiddleware
 ```

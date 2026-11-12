@@ -2,6 +2,7 @@ import re
 from urllib.parse import urlparse
 
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import FileField, ImageField
 from rest_framework import serializers
 from rest_framework.fields import empty
@@ -66,6 +67,30 @@ class ExtendableModelSerializer(BaseModelSerializer):
 
 class URLSerializer(serializers.Serializer):
     url = serializers.URLField()
+
+
+class ContentTypeByNameSerializer(serializers.ChoiceField):
+    """``app_label.model`` string in JSON; ``ContentType`` instance in Python."""
+
+    def __init__(self, choices=None, **kwargs):
+        if choices is None:
+            choices = []
+        super().__init__(choices=choices, **kwargs)
+
+    def to_representation(self, value):
+        if not value:
+            return None
+        return f"{value.app_label}.{value.model}"
+
+    def to_internal_value(self, data):
+        if not isinstance(data, str) or "." not in data:
+            raise serializers.ValidationError("Invalid format. Expected 'app_label.model', e.g. 'auth.user'.")
+
+        app_label, model = data.split(".", 1)
+        try:
+            return ContentType.objects.get(app_label=app_label.lower(), model=model.lower())
+        except ContentType.DoesNotExist:
+            raise serializers.ValidationError(f"Invalid content type: {data}")
 
 
 def get_image_url(request, file_field) -> str | None:
