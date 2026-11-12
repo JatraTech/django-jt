@@ -1,6 +1,6 @@
 from pydantic import BaseModel, RootModel
 
-from app.constants import DataType
+from django_jt.analytics.constants import DataType
 
 
 class AnalyticsDataItem(BaseModel):

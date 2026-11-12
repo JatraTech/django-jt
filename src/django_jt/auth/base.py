@@ -11,18 +11,8 @@ __all__ = [
     "auth901_base_url",
     "auth901_organization",
     "auth901_service_credentials",
-    "auth901_sync_initial_password",
     "link_auth901_sub",
 ]
-
-
-def auth901_sync_initial_password(*, cli_value: str | None = None) -> str | None:
-    """Initial Casdoor password for sync; env ``AUTH901_SYNC_INITIAL_PASSWORD`` wins over CLI."""
-    env_value = (_setting("AUTH901_SYNC_INITIAL_PASSWORD") or "").strip()
-    if env_value:
-        return env_value
-    cli = (cli_value or "").strip()
-    return cli or None
 
 
 def auth901_base_url() -> str:
@@ -35,8 +25,11 @@ def auth901_service_credentials() -> tuple[str, str]:
     client_id = (_setting("AUTH901_SERVICE_CLIENT_ID") or "").strip()
     client_secret = (_setting("AUTH901_SERVICE_CLIENT_SECRET") or "").strip()
     if not client_id or not client_secret:
+        client_id = (_setting("AUTH901_CLIENT_ID") or "").strip()
+        client_secret = (_setting("AUTH901_CLIENT_SECRET") or "").strip()
+    if not client_id or not client_secret:
         raise ValueError(
-            "AUTH901_SERVICE_CLIENT_ID and AUTH901_SERVICE_CLIENT_SECRET are required."
+            "Set AUTH901_SERVICE_CLIENT_ID/SECRET or AUTH901_CLIENT_ID/SECRET for Auth901 service APIs."
         )
     return client_id, client_secret
 

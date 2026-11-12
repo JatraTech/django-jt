@@ -1,0 +1,7 @@
+{% load django_jt_admin %}
+{% django_jt_backstage_installed as backstage_admin_login %}
+{% if backstage_admin_login %}
+{% include "admin/login_oidc_backstage.html" %}
+{% else %}
+{% include "admin/login_oidc_stock.html" %}
+{% endif %}

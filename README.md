@@ -15,16 +15,36 @@ uv add "django-jt[all] @ git+https://github.com/JatraTech/django-jt.git"
 A specific branch or tag (e.g. after a release):
 
 ```text
-uv add "django-jt[all] @ git+https://github.com/JatraTech/django-jt.git@v0.2.0"
+uv add "django-jt[all] @ git+https://github.com/JatraTech/django-jt.git@v0.3.0"
 ```
 
-**Releasing 0.2.0+ (maintainers):** tag `v0.2.0` on the django-jt repo after merge. In consuming apps (new901-admin, condhoa-backend, etc.) run `uv lock --upgrade-package django-jt` or pin the git URL with `@v0.2.0`, then reinstall so `sync_auth901_users` and org fail-fast apply.
+**Office default:** install `django-jt[all]` once; enable only the features you wire in settings (see [Feature recipes](#feature-recipes)).
 
-In this repo:
+**Releasing 0.3.0+ (maintainers):** tag `v0.3.0` on the django-jt repo after merge. In consuming apps (new901-admin, condhoa-backend, etc.) run `uv lock --upgrade-package django-jt` or pin the git URL with `@v0.2.0`, then reinstall so `sync_auth901_users` and org fail-fast apply.
+
+## Documentation
+
+This package ships a single manual at the repo root—no `docs/` tree.
+
+| File | Purpose |
+|------|---------|
+| `README.md` (this file) | Install, feature recipes, API surface |
+| [CHANGELOG.md](CHANGELOG.md) | Release notes |
+
+**Naming:** Root docs use `README.md` and `CHANGELOG.md` only. [django-template](https://github.com/JatraTech/django-template) and [django-backstage](https://github.com/JatraTech/django-backstage) use **SCREAMING_SNAKE.md** for topic files under `docs/` (and `docs/architecture/` on the template).
+
+## Development
+
+Clone this repository:
 
 ```text
 uv sync --all-extras --group dev
-uv run pytest
+```
+
+## Verification
+
+```text
+uv run pytest -q
 ```
 
 pip fallback: `pip install -e ".[all]"`.
@@ -39,7 +59,28 @@ Optional extras:
 | `email` | `requests` (Postmaster backend) |
 | `errors` | `drf-standardized-errors` |
 | `oidc` | `mozilla-django-oidc` (Auth901 login) |
-| `all` | Everything above |
+| `analytics` | `pydantic`, `polars`, `styleframe` (analytics payloads + XLSX export) |
+| `all` | Everything above, plus Pillow, Google Gmail API, MSAL (Graph mail), and analytics deps |
+
+## Feature recipes
+
+Install is the same for every profile: **`django-jt[all]`**. Runtime wiring picks what runs.
+
+| Profile | Enable |
+|--------|--------|
+| **DRF mixins only** | Import `django_jt.mixins.*`, `pagination`, `filters`; no Auth901 settings |
+| **JWT / no Auth901** | Leave `AUTH901_CLIENT_ID` unset; do not include `django_jt.urls` for OIDC; optional `AUTHENTICATION_BACKENDS = ["django_jt.backends.authentication.StatusBackend"]` for Django admin session login |
+| **Auth901 browser login** | `mozilla_django_oidc` in `INSTALLED_APPS`, `AUTH901_CLIENT_ID`, backends, `include("django_jt.urls")` |
+| **Postmaster mail** | `EMAIL_BACKEND = "django_jt.backends.email.postmaster.PostMasterEmailBackend"` |
+| **Gmail API** | Same backend path pattern: `django_jt.backends.email.gmail.GmailBackend`; `manage.py gmail_oauth_token` |
+| **Microsoft Graph** | `django_jt.backends.email.graph.GraphEmailBackend`; `manage.py graph_auth` |
+| **Request id** | `django_jt.request_id.RequestIdMiddleware` + log filter |
+| **Audience-scoped lists** | `REST_FRAMEWORK["DEFAULT_FILTER_BACKENDS"]` includes `django_jt.filters.AudienceFilter`; set `audience_lookups` on viewsets |
+| **Date proximity sort** | Add `django_jt.ordering.ProximityOrderingFilter`; use `?ordering==due_at` on date fields (PostgreSQL) |
+| **Analytics / XLSX export** | `from django_jt.analytics import AnalyticsData`; mixins in `django_jt.mixins.analytics` and `django_jt.mixins.export` |
+| **Legacy admin gate** | `django_jt.permissions.AdminOnly`; optional `DJANGO_JT_ADMIN_ROLES = ["admin", "super_admin"]` |
+
+Async outbound mail (optional): Gmail/Graph queue when `CELERY_TASK_ALWAYS_EAGER` is set or a Celery worker responds to ping; otherwise the web process sends synchronously. Celery tasks `django_jt.backends.email.tasks.send_gmail_emails` / `send_graph_emails` register when `django_jt` is in `INSTALLED_APPS` (no host `app.tasks` mirror required). Workers must load Django (`DJANGO_SETTINGS_MODULE`) so `DjangoJTConfig.ready()` runs.
 
 ## Custom user model
 
@@ -67,7 +108,9 @@ INSTALLED_APPS = [
 
 ## Auth901 / mozilla-django-oidc
 
-Install the `oidc` extra. Defaults assume `AUTH901_BASE_URL=https://auth.new901.io` with PKCE (S256) and RS256. **`AUTH901_CLIENT_ID` has no package default** — set it in settings or the environment (example: `395373995647565826`).
+Install the `oidc` extra (included in `[all]`). Defaults assume `AUTH901_BASE_URL=https://auth.new901.io` with PKCE (S256) and RS256. **`AUTH901_CLIENT_ID` has no package default** — set it in settings or the environment (example: `395373995647565826`).
+
+OIDC settings are applied from `AUTH901_*` only when **`AUTH901_CLIENT_ID`** is set and `mozilla_django_oidc` is installed. JWT-only hosts leave the client id unset.
 
 ```python
 # settings.py
@@ -113,12 +156,14 @@ urlpatterns = [
 ]
 ```
 
+**Admin login:** With `AUTH901_CLIENT_ID` set and `mozilla_django_oidc` installed, `django_jt` prepends its templates directory so Django admin uses Auth901 OIDC instead of the username/password form. Install **django-backstage** for the branded Backstage login page; without Backstage, a minimal stock template with the same OIDC link is used. Optional `LOGIN_REDIRECT_URL = "/admin/"`. Do not ship a project-local `admin/login.html` unless you intentionally override this behavior.
+
 `OIDCBackend` looks up users by `auth901_sub`, then email, and writes `sub`, email, and name claims onto the user.
 
-`POST /auth/invite/` (signed in) creates the person in Auth901 via `django_jt.auth.oidc.invite_user` and emails them an invite. Install the `rest` extra. A service account calls Auth901; set these in settings or the environment:
+`POST /auth/invite/` (signed in) creates the person in Auth901 via `django_jt.auth.oidc.invite_user` and emails them an invite. Install the `rest` extra. Service API calls use `auth901_service_credentials()`: set **`AUTH901_SERVICE_CLIENT_ID` / `AUTH901_SERVICE_CLIENT_SECRET`**, or omit them and use the same **`AUTH901_CLIENT_ID` / `AUTH901_CLIENT_SECRET`** as browser OIDC when that Casdoor app allows client credentials (typical local dev). Production should use a dedicated M2M client via `AUTH901_SERVICE_*`.
 
 ```python
-AUTH901_SERVICE_CLIENT_ID = "..."
+AUTH901_SERVICE_CLIENT_ID = "..."  # optional if CLIENT_* has client_credentials + admin APIs
 AUTH901_SERVICE_CLIENT_SECRET = "..."
 AUTH901_ORGANIZATION_ID = "..."  # optional; or AUTH901_ORGANIZATION (see django_jt.auth.base)
 ```
@@ -136,10 +181,11 @@ Separate from invite/OIDC: `django_jt.auth.auth901_sync` and `manage.py sync_aut
 Requires a machine client with permission to those APIs (delegated admin or equivalent), plus:
 
 ```python
+# SERVICE_* optional when OIDC CLIENT_* is enabled for client credentials (sync uses SERVICE first, else CLIENT)
 AUTH901_SERVICE_CLIENT_ID = "..."
 AUTH901_SERVICE_CLIENT_SECRET = "..."
 AUTH901_ORGANIZATION = "new901"  # or AUTH901_ORGANIZATION_ID (same as invite)
-AUTH901_APPLICATION = "hrm"  # optional; signupApplication on new users
+AUTH901_APPLICATION = "hrm"  # optional; signupApplication on new users from sync
 ```
 
 For users who exist locally but have not signed in with OIDC yet:
@@ -153,19 +199,18 @@ python manage.py sync_auth901_users --repair
 
 ### Initial Casdoor password (optional)
 
-Sync does **not** copy Django password hashes. To set a shared initial password in Auth901 (dev/migration), use env or CLI (env wins):
+Sync does **not** copy Django password hashes. To set a shared initial password in Auth901 (dev/migration), pass CLI flags:
 
 ```text
-export AUTH901_SYNC_INITIAL_PASSWORD='your-dev-password'
-python manage.py sync_auth901_users --require-password-change
+python manage.py sync_auth901_users --initial-password 'your-dev-password' --require-password-change
 ```
 
 | Flag | Effect |
 |------|--------|
-| (default) | New Casdoor users get the initial password on `add-user` when configured; existing Auth901 users are unchanged |
+| (default) | New Casdoor users get the initial password on `add-user` when `--initial-password` is set; existing Auth901 users are unchanged |
 | `--require-password-change` | Sets `needUpdatePassword` on `add-user` when an initial password is set |
 
-Do not commit `AUTH901_SYNC_INITIAL_PASSWORD`. Prefer env over `--initial-password` (shell history). Use `--require-password-change` outside local dev when everyone shares one initial password.
+Avoid putting real passwords in shell history if your environment logs commands; use your usual secret-handling approach for one-off migrations.
 
 By default the command processes **active** users with a non-empty email and a blank `auth901_sub`. It looks up Auth901 by **email** before creating anyone, so the same person synced from two apps gets the **same** `auth901_sub` when they already exist in Auth901. **First project wins:** only the first create sets Casdoor login **`name`** (from the Django **`username`**, sanitized) and profile (`first_name`/`last_name`, or a single `name` field split for display). A later app sync only backfills local `auth901_sub` and does not call `update-user` on Auth901. If Casdoor rejects a taken `name`, sync retries once with the email local-part. OIDC login still links users on first sign-in; sync is for backfill and migration.
 
@@ -194,10 +239,19 @@ CORS_EXPOSE_HEADERS = (..., "X-Request-ID")
 ## Other utilities
 
 ```python
+from django_jt import format_duration_hhmmss
 from django_jt.mixins.models import ModelMixin, NameModelMixin, CodeModelMixin
-from django_jt.fields import AmountField, EncryptedTextField
-from django_jt.pagination import StandardPagination
+from django_jt.mixins.serializers import ContentTypeByNameSerializer
+from django_jt.fields import AmountField, EncryptedTextField, OptimizedImageField
+from django_jt.ordering import CustomOrderingFilter, ProximityOrderingFilter
+from django_jt.pagination import (
+    DummyPagination,
+    StandardCursorPagination,
+    StandardLimitOffsetPagination,
+    StandardPagination,
+)
 from django_jt.backends.email.postmaster import PostMasterEmailBackend
+from django_jt.middleware import OverrideContentTypeMiddleware
 ```
 
 `ModelMixin` uses `UserForeignKey`. Projects that use it should add `django_userforeignkey` to `INSTALLED_APPS`.
@@ -212,8 +266,17 @@ from django_jt.backends.email.postmaster import PostMasterEmailBackend
 
 Requires the `email` extra (`requests`).
 
+## Gmail and Graph email
+
+See `django_jt.backends.email.gmail` and `django_jt.backends.email.graph`. Management commands: `gmail_oauth_token`, `graph_auth`. Celery tasks live in `django_jt.backends.email.tasks` and register via `DjangoJTConfig.ready()`.
+
+## Health and OpenAPI UI
+
+- **Probes:** `django_jt.health.liveness` and `django_jt.health.readiness` — wire in root `urls.py`, e.g. `path("healthz", liveness)` (optional `readiness` for k8s).
+- **Schema browsers:** `django_jt.drf.spectacular.SpectacularElementsView` and `SpectacularRapiDocView` (host still provides `elements.html` / `rapidoc.html` templates).
+
 Encrypted fields read `settings.FIELD_ENCRYPTION_KEYS` (a list of Fernet keys). The first key encrypts; every key can decrypt.
 
-## Host-coupled code
+## Out of package scope (0.3.x)
 
-Tenant, audit, and blueprint-specific modules live in `unported/` and are not installed. They still depend on host apps such as `tenancy` and `audit`.
+Multi-tenant viewsets, L1 `record_viewset` factories, and audit/blueprint-specific API helpers are **not** in the installable package. Multi-tenant products (e.g. MemBlue, 901Levee) keep them under local `app/utils/` until a future optional extra with injectable host settings.

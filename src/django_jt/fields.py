@@ -1,10 +1,33 @@
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 from django.db import models
-from django.db.models import DecimalField
+from django.db.models import DecimalField, ImageField
+from django.db.models.fields.files import ImageFieldFile
 
 from django_jt.crypto import decrypt_json, decrypt_str, encrypt_json, encrypt_str
+
+
+class OptimizedImageFieldFile(ImageFieldFile):
+    """ImageFieldFile that converts uploads to optimized WebP on save."""
+
+    def save(self, name, content, save=True):
+        if name and not str(name).lower().endswith(".webp"):
+            from django_jt.images import optimize_image_content
+
+            content, name = optimize_image_content(content, Path(str(name)).name)
+        return super().save(name, content, save=save)
+
+
+class OptimizedImageField(ImageField):
+    """ImageField that auto-optimizes uploads to WebP (skips existing .webp)."""
+
+    attr_class = OptimizedImageFieldFile
+
+    def deconstruct(self):
+        name, path, args, kwargs = super().deconstruct()
+        return name, "django.db.models.ImageField", args, kwargs
 
 
 class MoneyField(DecimalField):

@@ -1,0 +1,47 @@
+{% extends 'backstage/layouts/unauthenticated.html' %}
+
+{% load i18n static backstage %}
+
+{% block title %}
+ {{ title }} | {{ site_title }}
+{% endblock %}
+
+{% block content %}
+ {% include "backstage/helpers/unauthenticated_title.html" with title=site_title|default:_('Django site admin') subtitle=_('Welcome back to') %}
+
+ {% include "backstage/helpers/messages.html" %}
+
+ {% block login_before %}{% endblock %}
+
+ {% if user.is_authenticated %}
+ {% blocktranslate trimmed asvar message %}
+ You are authenticated as {{ username }}, but are not authorized to
+ access this page. Would you like to login to a different account?
+ {% endblocktranslate %}
+
+ <div class="flex flex-col gap-4 mb-8 *:mb-0">
+ {% include "backstage/helpers/messages/error.html" with error=message %}
+ </div>
+
+ <p class="mb-6 text-sm">Current user: {{ user.email }}</p>
+
+ <form action="{% url 'oidc_logout' %}" method="post">
+ {% csrf_token %}
+ {% component "backstage/components/button.html" with submit=1 variant="primary" class="w-full" %}
+ {% translate 'Log out' %}
+ {% endcomponent %}
+ </form>
+ {% else %}
+ {% url 'oidc_authentication_init' as oidc_login_url %}
+ {% firstof request.GET.next "/admin/" as oidc_next %}
+ {% with oidc_next_q=oidc_next|urlencode %}
+ {% with oidc_login_href=oidc_login_url|add:"?next="|add:oidc_next_q %}
+ {% component "backstage/components/button.html" with href=oidc_login_href variant="primary" class="w-full" %}
+ {% translate 'Log in' %} <span class="material-symbols-outlined relative right-0 transition-all group-hover:-right-1 text-sm">arrow_forward</span>
+ {% endcomponent %}
+ {% endwith %}
+ {% endwith %}
+ {% endif %}
+
+ {% block login_after %}{% endblock %}
+{% endblock %}

@@ -1,9 +1,10 @@
 import calendar
 from datetime import date
 
+from django.utils.dateparse import parse_duration
 from django.utils.timezone import datetime, timedelta
 
-__version__ = "0.2.0"
+__version__ = "0.3.2"
 
 
 def str_to_bool(value) -> bool:
@@ -44,3 +45,36 @@ def get_last_date_of_current_month() -> date:
         month=today.month,
         day=calendar.monthrange(today.year, today.month)[1],
     ).date()
+
+
+def format_duration_hhmmss(value):
+    if value in (None, ""):
+        return value
+
+    duration = value if isinstance(value, timedelta) else parse_duration(str(value))
+    if duration is None:
+        return value
+
+    total_seconds = int(duration.total_seconds())
+    sign = "-" if total_seconds < 0 else ""
+    total_seconds = abs(total_seconds)
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{sign}{hours:02}:{minutes:02}:{seconds:02}"
+
+
+def format_duration_hhmmday(value):
+    if value in (None, ""):
+        return value
+
+    duration = value if isinstance(value, timedelta) else parse_duration(str(value))
+    if duration is None:
+        return value
+
+    total_seconds = int(duration.total_seconds())
+    sign = "-" if total_seconds < 0 else ""
+    total_seconds = abs(total_seconds)
+    days, remainder = divmod(total_seconds, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{sign}{days} {hours:02}:{minutes:02}:{seconds:02}"

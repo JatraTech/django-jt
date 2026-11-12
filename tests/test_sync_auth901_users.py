@@ -140,6 +140,18 @@ def test_sync_creates_then_links(monkeypatch):
 
 
 @pytest.mark.django_db
+def test_sync_sets_signup_application_from_setting(monkeypatch, settings):
+    import tests.settings as test_settings
+
+    settings.AUTH901_APPLICATION = "hrm"
+    monkeypatch.setattr(test_settings, "AUTH901_APPLICATION", "hrm")
+    counters = _mock_auth(monkeypatch, existing=False)
+    user = User.objects.create_user(username="ada", email="ada@example.com", password="x")
+    assert sync_user(user) == SyncOutcome.CREATED
+    assert counters["add_user_posts"][0]["signupApplication"] == "hrm"
+
+
+@pytest.mark.django_db
 def test_sync_create_uses_django_username_not_email_local(monkeypatch):
     counters = _mock_auth(monkeypatch, existing=False)
     user = User.objects.create_user(
@@ -305,23 +317,21 @@ def test_sync_links_existing_without_password_update(monkeypatch):
 
 
 @pytest.mark.django_db
-def test_auth901_sync_initial_password_env_wins(monkeypatch, settings):
-    from django_jt.auth.base import auth901_sync_initial_password
-
-    settings.AUTH901_SYNC_INITIAL_PASSWORD = "from-env"
-    assert auth901_sync_initial_password(cli_value="from-cli") == "from-env"
-
-
-@pytest.mark.django_db
 def test_command_requires_service_credentials(settings, monkeypatch):
     monkeypatch.delenv("AUTH901_SERVICE_CLIENT_ID", raising=False)
     monkeypatch.delenv("AUTH901_SERVICE_CLIENT_SECRET", raising=False)
+    monkeypatch.delenv("AUTH901_CLIENT_ID", raising=False)
+    monkeypatch.delenv("AUTH901_CLIENT_SECRET", raising=False)
     settings.AUTH901_SERVICE_CLIENT_ID = ""
     settings.AUTH901_SERVICE_CLIENT_SECRET = ""
+    settings.AUTH901_CLIENT_ID = ""
+    settings.AUTH901_CLIENT_SECRET = ""
     import tests.settings as test_settings
 
     monkeypatch.setattr(test_settings, "AUTH901_SERVICE_CLIENT_ID", "")
     monkeypatch.setattr(test_settings, "AUTH901_SERVICE_CLIENT_SECRET", "")
+    monkeypatch.setattr(test_settings, "AUTH901_CLIENT_ID", "")
+    monkeypatch.setattr(test_settings, "AUTH901_CLIENT_SECRET", "")
     with pytest.raises(CommandError):
         call_command("sync_auth901_users")
 

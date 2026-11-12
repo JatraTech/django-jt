@@ -1,7 +1,11 @@
 from collections import OrderedDict
 
 from rest_framework import response
-from rest_framework.pagination import PageNumberPagination
+from rest_framework.pagination import (
+    CursorPagination,
+    LimitOffsetPagination,
+    PageNumberPagination,
+)
 
 #: The largest page any list endpoint answers (``?page_size=`` above it gets this many).
 MAX_PAGE_SIZE = 200
@@ -30,3 +34,12 @@ class DummyPagination(PageNumberPagination):
                 ]
             )
         )
+
+
+class StandardLimitOffsetPagination(LimitOffsetPagination):
+    default_limit = 20
+
+
+class StandardCursorPagination(CursorPagination):
+    page_size = 20
+    ordering = "name"

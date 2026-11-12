@@ -1,0 +1,30 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% blocktranslate %}{{ title }} | {{ site_name }}{% endblocktranslate %}</title>
+</head>
+<body>
+  <main>
+    <h1 id="site-name">{{ site_header|default:site_title|default:_('Django administration') }}</h1>
+
+    {% if user.is_authenticated %}
+    <p>{% blocktranslate %}You are authenticated as {{ username }}, but are not authorized to access this page.{% endblocktranslate %}</p>
+    <p>{% if user.email %}<strong>{{ user.email }}</strong>{% endif %}</p>
+    <form action="{% url 'oidc_logout' %}" method="post">
+      {% csrf_token %}
+      <button type="submit">{% translate 'Log out' %}</button>
+    </form>
+    {% else %}
+    {% url 'oidc_authentication_init' as oidc_login_url %}
+    {% firstof request.GET.next "/admin/" as oidc_next %}
+    {% with oidc_next_q=oidc_next|urlencode %}
+    {% with oidc_login_href=oidc_login_url|add:"?next="|add:oidc_next_q %}
+    <p><a href="{{ oidc_login_href }}">{% translate 'Log in' %}</a></p>
+    {% endwith %}
+    {% endwith %}
+    {% endif %}
+  </main>
+</body>
+</html>
