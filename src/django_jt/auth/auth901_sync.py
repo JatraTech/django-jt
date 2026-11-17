@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
@@ -19,6 +20,8 @@ from django_jt.auth.defaults import _setting
 DEFAULT_SERVICE_SCOPE = "openid"
 _casdoor_token: str | None = None
 
+logger = logging.getLogger(__name__)
+
 @dataclass(frozen=True, slots=True)
 class SyncPasswordOptions:
     initial_password: str | None
@@ -33,6 +36,7 @@ __all__ = [
     "organization",
     "provision_user",
     "reset_casdoor_token",
+    "sync_application",
     "sync_user",
 ]
 
@@ -52,6 +56,44 @@ def organization() -> str:
         return auth901_organization(required=True)
     except ValueError as exc:
         raise Auth901Error(str(exc)) from exc
+
+
+def sync_application() -> str:
+    """Configured Auth901 application whose membership sync ensures ("" when unset)."""
+    return (_setting("AUTH901_APPLICATION") or "").strip()
+
+
+def _ensure_application_membership(remote_owner: str | None, remote_name: str | None) -> bool:
+    """Grant the configured app membership to ``owner/name`` (idempotent, no-op when unset).
+
+    Raises ``Auth901Error`` on transport or API failure; callers keep an otherwise
+    good link outcome and only log the grant failure.
+    """
+    app = sync_application()
+    if not app:
+        return False
+    owner = (remote_owner or "").strip() or organization()
+    name = (remote_name or "").strip()
+    if not name:
+        return False
+    body = _casdoor_request(
+        "POST",
+        "/api/add-user-application",
+        json={"owner": owner, "name": name, "application": app},
+    )
+    if body.get("status") != "ok":
+        msg = (body.get("msg") or "Auth901 add-user-application failed.").strip()
+        raise Auth901Error(msg)
+    logger.info("Granted %s membership to %s/%s.", app, owner, name)
+    return True
+
+
+def _grant_membership_best_effort(remote: dict | None) -> None:
+    """Ensure app membership without ever breaking an established ``auth901_sub`` link."""
+    try:
+        _ensure_application_membership((remote or {}).get("owner"), (remote or {}).get("name"))
+    except Exception as exc:
+        logger.warning("Auth901 membership grant failed (link preserved): %s", exc)
 
 
 def _service_token() -> str:
@@ -321,15 +363,17 @@ def sync_user(
             if dry_run:
                 return SyncOutcome.RELINKED
             link_auth901_sub(user, remote_sub)
+            _grant_membership_best_effort(remote)
             return SyncOutcome.RELINKED
 
         if dry_run:
             return SyncOutcome.RECREATED
         try:
-            sub, _created, _remote = _provision_user_from_local(user, email, password_options)
+            sub, _created, remote = _provision_user_from_local(user, email, password_options)
         except Auth901Error:
             return SyncOutcome.ERROR
         link_auth901_sub(user, sub)
+        _grant_membership_best_effort(remote)
         return SyncOutcome.RECREATED
 
     if dry_run:
@@ -342,9 +386,10 @@ def sync_user(
         return SyncOutcome.CREATED
 
     try:
-        sub, created, _remote = _provision_user_from_local(user, email, password_options)
+        sub, created, remote = _provision_user_from_local(user, email, password_options)
     except Auth901Error:
         return SyncOutcome.ERROR
 
     link_auth901_sub(user, sub)
+    _grant_membership_best_effort(remote)
     return SyncOutcome.CREATED if created else SyncOutcome.LINKED_EXISTING

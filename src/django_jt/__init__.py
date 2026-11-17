@@ -4,7 +4,7 @@ from datetime import date
 from django.utils.dateparse import parse_duration
 from django.utils.timezone import datetime, timedelta
 
-__version__ = "0.3.2"
+__version__ = "0.3.4"
 
 
 def str_to_bool(value) -> bool:

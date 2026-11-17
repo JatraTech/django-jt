@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.4
+
+- **Auth901:** `sync_auth901_users` ensures `AUTH901_APPLICATION` membership on every synced user (idempotent `add-user-application` grant, existing users included). New users still get `signupApplication`; existing users keep theirs. Grant failures log a warning without breaking the `auth901_sub` link. Dry-run reports `would grant <app> membership` with zero grant POSTs.
+
 ## 0.3.3
 
 - **BREAKING:** `BaseModelViewSet` uses **`action_serializers`** only for per-action serializer maps; the `serializers` class attribute is no longer read. Migrate viewsets that set `serializers = {...}` to `action_serializers`.
