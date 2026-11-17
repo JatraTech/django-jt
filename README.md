@@ -185,7 +185,7 @@ Requires a machine client with permission to those APIs (delegated admin or equi
 AUTH901_SERVICE_CLIENT_ID = "..."
 AUTH901_SERVICE_CLIENT_SECRET = "..."
 AUTH901_ORGANIZATION = "new901"  # or AUTH901_ORGANIZATION_ID (same as invite)
-AUTH901_APPLICATION = "hrm"  # optional; signupApplication on new users from sync
+AUTH901_APPLICATION = "hrm"  # optional; signupApplication on new users from sync, plus app membership grant on every sync
 ```
 
 For users who exist locally but have not signed in with OIDC yet:

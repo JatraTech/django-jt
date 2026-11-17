@@ -22,30 +22,51 @@ class _Reply:
 def _mock_auth_remote_id(monkeypatch, *, remote_id: str):
     """Always return one Casdoor user with the given id."""
 
+    lookups = {"grant_posts": []}
+
     def post(url, **kwargs):
         if "access_token" in url:
             return _Reply({"access_token": "tok"})
+        if "add-user-application" in url:
+            lookups["grant_posts"].append(kwargs.get("json") or {})
         return _Reply({"status": "ok", "data": "Affected"})
 
     def get(url, **kwargs):
         params = kwargs.get("params") or {}
         email = params.get("value") or "ada@example.com"
-        return _Reply({"status": "ok", "data": [{"id": remote_id, "email": email}]})
+        return _Reply(
+            {
+                "status": "ok",
+                "data": [{"id": remote_id, "email": email, "owner": "built-in", "name": "ada"}],
+            }
+        )
 
     monkeypatch.setattr("django_jt.auth.auth901_sync.requests.post", post)
     monkeypatch.setattr(
         "django_jt.auth.auth901_sync.requests.request",
         lambda method, url, **kw: get(url, **kw) if method == "GET" else post(url, **kw),
     )
+    return lookups
 
 
-def _mock_auth(monkeypatch, *, existing: bool, remote_password: str = "***"):
+def _mock_auth(monkeypatch, *, existing: bool, remote_password: str = "***", grant_ok: bool = True):
     """existing=True: get-users always returns one user; else empty then after add-user returns user."""
-    lookups = {"n": 0, "get_calls": 0, "add_user_posts": [], "update_user_posts": []}
+    lookups = {
+        "n": 0,
+        "get_calls": 0,
+        "add_user_posts": [],
+        "update_user_posts": [],
+        "grant_posts": [],
+    }
 
     def post(url, **kwargs):
         if "access_token" in url:
             return _Reply({"access_token": "tok"})
+        if "add-user-application" in url:
+            lookups["grant_posts"].append(kwargs.get("json") or {})
+            if grant_ok:
+                return _Reply({"status": "ok", "data": "Affected"})
+            return _Reply({"status": "error", "msg": "grant denied"})
         if "add-user" in url:
             lookups["add_user_posts"].append(kwargs.get("json") or {})
             return _Reply({"status": "ok", "data": "Affected"})
@@ -97,6 +118,14 @@ def _mock_auth(monkeypatch, *, existing: bool, remote_password: str = "***"):
         lambda method, url, **kw: get(url, **kw) if method == "GET" else post(url, **kw),
     )
     return lookups
+
+
+def _set_application(monkeypatch, settings, value: str):
+    import tests.settings as test_settings
+
+    monkeypatch.delenv("AUTH901_APPLICATION", raising=False)
+    settings.AUTH901_APPLICATION = value
+    monkeypatch.setattr(test_settings, "AUTH901_APPLICATION", value)
 
 
 @pytest.mark.django_db
@@ -334,6 +363,93 @@ def test_command_requires_service_credentials(settings, monkeypatch):
     monkeypatch.setattr(test_settings, "AUTH901_CLIENT_SECRET", "")
     with pytest.raises(CommandError):
         call_command("sync_auth901_users")
+
+
+@pytest.mark.django_db
+def test_sync_existing_user_grants_app_membership(monkeypatch, settings):
+    _set_application(monkeypatch, settings, "hrm")
+    counters = _mock_auth(monkeypatch, existing=True)
+    user = User.objects.create_user(username="ada", email="ada@example.com", password="x")
+    assert sync_user(user) == SyncOutcome.LINKED_EXISTING
+    user.refresh_from_db()
+    assert user.auth901_sub == "remote-sub-1"
+    assert len(counters["grant_posts"]) == 1
+    assert counters["grant_posts"][0] == {
+        "owner": "built-in",
+        "name": "ada",
+        "application": "hrm",
+    }
+
+
+@pytest.mark.django_db
+def test_sync_new_user_grant_post_at_most_once(monkeypatch, settings):
+    _set_application(monkeypatch, settings, "hrm")
+    counters = _mock_auth(monkeypatch, existing=False)
+    user = User.objects.create_user(username="ada", email="ada@example.com", password="x")
+    assert sync_user(user) == SyncOutcome.CREATED
+    user.refresh_from_db()
+    assert user.auth901_sub == "new-sub-1"
+    assert len(counters["grant_posts"]) <= 1
+    for post in counters["grant_posts"]:
+        assert post["application"] == "hrm"
+        assert post["owner"] == "built-in"
+
+
+@pytest.mark.django_db
+def test_sync_dry_run_makes_no_grant_posts(monkeypatch, settings):
+    _set_application(monkeypatch, settings, "hrm")
+    counters = _mock_auth(monkeypatch, existing=True)
+    user = User.objects.create_user(username="ada", email="ada@example.com", password="x")
+    assert sync_user(user, dry_run=True) == SyncOutcome.LINKED_EXISTING
+    assert counters["grant_posts"] == []
+
+
+@pytest.mark.django_db
+def test_sync_no_grant_when_application_blank(monkeypatch, settings):
+    _set_application(monkeypatch, settings, "")
+    counters = _mock_auth(monkeypatch, existing=True)
+    user = User.objects.create_user(username="ada", email="ada@example.com", password="x")
+    assert sync_user(user) == SyncOutcome.LINKED_EXISTING
+    assert counters["grant_posts"] == []
+
+
+@pytest.mark.django_db
+def test_sync_grant_failure_preserves_link(monkeypatch, settings):
+    _set_application(monkeypatch, settings, "hrm")
+    counters = _mock_auth(monkeypatch, existing=True, grant_ok=False)
+    user = User.objects.create_user(username="ada", email="ada@example.com", password="x")
+    assert sync_user(user) == SyncOutcome.LINKED_EXISTING
+    user.refresh_from_db()
+    assert user.auth901_sub == "remote-sub-1"
+    assert len(counters["grant_posts"]) == 1
+
+
+@pytest.mark.django_db
+def test_repair_relink_grants_app_membership(monkeypatch, settings):
+    _set_application(monkeypatch, settings, "hrm")
+    counters = _mock_auth_remote_id(monkeypatch, remote_id="remote-sub-2")
+    user = User.objects.create_user(
+        username="ada",
+        email="ada@example.com",
+        password="x",
+        auth901_sub="stale-sub",
+    )
+    assert sync_user(user, repair=True) == SyncOutcome.RELINKED
+    user.refresh_from_db()
+    assert user.auth901_sub == "remote-sub-2"
+    assert len(counters["grant_posts"]) == 1
+    assert counters["grant_posts"][0]["application"] == "hrm"
+
+
+@pytest.mark.django_db
+def test_command_dry_run_reports_would_grant(monkeypatch, settings, capsys):
+    _set_application(monkeypatch, settings, "hrm")
+    counters = _mock_auth(monkeypatch, existing=True)
+    User.objects.create_user(username="ada", email="ada@example.com", password="x")
+    call_command("sync_auth901_users", dry_run=True)
+    out = capsys.readouterr().out
+    assert "ada@example.com: would grant hrm membership" in out
+    assert counters["grant_posts"] == []
 
 
 @pytest.mark.django_db

@@ -10,6 +10,7 @@ from django_jt.auth.auth901_sync import (
     SyncOutcome,
     SyncPasswordOptions,
     reset_casdoor_token,
+    sync_application,
     sync_user,
 )
 from django_jt.auth.base import auth901_organization, auth901_service_credentials
@@ -77,6 +78,13 @@ class Command(BaseCommand):
             qs = qs.filter(Q(auth901_sub__isnull=True) | Q(auth901_sub=""))
 
         counts: Counter[str] = Counter()
+        grant_app = sync_application() if dry_run else ""
+        grantable = {
+            SyncOutcome.LINKED_EXISTING,
+            SyncOutcome.CREATED,
+            SyncOutcome.RELINKED,
+            SyncOutcome.RECREATED,
+        }
         for user in qs:
             try:
                 outcome = sync_user(
@@ -92,6 +100,8 @@ class Command(BaseCommand):
                 )
             counts[outcome.value] += 1
             self.stdout.write(f"{user.email}: {outcome.value}")
+            if grant_app and outcome in grantable:
+                self.stdout.write(f"{user.email}: would grant {grant_app} membership")
 
         self.stdout.write("")
         self.stdout.write(self.style.MIGRATE_HEADING("Summary"))
